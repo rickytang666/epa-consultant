@@ -35,4 +35,4 @@ Three-part pipeline to extract, index, and query regulatory document data:
 ### Interface
 
 - REST API for queries and table access
-- Simple frontend for Q&A and data exploration
+- Simple frontend for Q&A
