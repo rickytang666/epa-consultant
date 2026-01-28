@@ -1,0 +1,14 @@
+Analyze this document header hierarchy and identify any headers at the WRONG level.
+
+HEADERS:
+{% for level, name in headers %}
+{{ level }}: {{ name }}
+{% endfor %}
+
+RULES:
+1. Headers with patterns like "A.", "B.", "C.", "D." should be at the SAME level
+2. Roman numerals like "I.", "II.", "III." should be at the same level
+3. Only suggest fixes when you are CERTAIN - be conservative
+
+First, describe what patterns you observe and any issues you identify.
+Then provide your corrections (empty list if none needed).

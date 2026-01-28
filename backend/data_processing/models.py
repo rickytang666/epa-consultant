@@ -13,8 +13,7 @@ class SectionHeader:
 class ChunkLocation:
     """Physical location of the text in the original document."""
     page_number: int
-    start_char_index: Optional[int] = None 
-    end_char_index: Optional[int] = None
+
 
 
 @dataclass
@@ -41,5 +40,34 @@ class IngestedDocument:
     id: str
     filename: str
     total_pages: int
-    chunks: List[ProcessedChunk]
+    chunks: List[ProcessedChunk]  # Small chunks for RAG
+    section_chunks: List[ProcessedChunk] = field(default_factory=list)  # Large merged chunks for summaries
     ingested_at: datetime = field(default_factory=datetime.utcnow)
+
+
+# Pydantic models for LLM structured output
+from pydantic import BaseModel
+
+class HeaderCorrection(BaseModel):
+    """A single header correction."""
+    original_level: str  # e.g., "Header 4"
+    original_name: str
+    corrected_level: str  # e.g., "Header 3"
+    reason: str
+
+
+class HeaderAnalysis(BaseModel):
+    """Structured output for header hierarchy analysis."""
+    # Reasoning fields to encourage better analysis
+    observed_patterns: str  # What patterns does the LLM see?
+    identified_issues: str  # What inconsistencies were found?
+    confidence_level: str  # "high", "medium", or "low"
+    
+    # Final corrections
+    corrections: List[HeaderCorrection]
+
+
+class SectionSummary(BaseModel):
+    """Structured output for section summary."""
+    key_topics: str  # Main topics covered
+    summary: str  # 1-4 sentence summary
