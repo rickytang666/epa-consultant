@@ -19,14 +19,13 @@ def init_vector_store(collection_name: str = "epa_chunks"):
     returns:
         chromadb collection object
     """
-    # ensure data directory exists
+    # ensure data dir exists
     os.makedirs(CHROMA_DB_DIR, exist_ok=True)
     
-    # initialize persistent client
+    # init persistent client
     client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
     
-    # get or create collection
-    # we use cosine similarity space by default
+    # get/create collection (cosine similarity)
     collection = client.get_or_create_collection(
         name=collection_name, 
         metadata={"hnsw:space": "cosine"}
@@ -35,15 +34,31 @@ def init_vector_store(collection_name: str = "epa_chunks"):
     return collection
 
 
-def insert_chunks(chunks: List[Dict[str, Any]], embeddings: List[List[float]]):
+def insert_chunks(chunks: List[Dict[str, Any]], embeddings: List[List[float]], collection_name: str = "epa_chunks"):
     """
     insert chunks and embeddings into chromadb
     
     args:
         chunks: list of chunks with metadata
         embeddings: corresponding embedding vectors
+        collection_name: name of the collection
     """
-    pass
+    if not chunks:
+        return
+
+    collection = init_vector_store(collection_name)
+    
+    ids = [c["chunk_id"] for c in chunks]
+    documents = [c["text"] for c in chunks]
+    metadatas = [c["metadata"] for c in chunks]
+    
+    # assumes data eng provides clean primitive metadata
+    collection.add(
+        ids=ids,
+        embeddings=embeddings,
+        metadatas=metadatas,
+        documents=documents
+    )
 
 
 def search_chunks(query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
