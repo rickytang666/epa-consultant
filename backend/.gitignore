@@ -1,0 +1,25 @@
+# environment
+.env
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# virtual environment
+venv/
+env/
+ENV/
+
+# data
+data/raw/*.pdf
+data/processed/*.json
+data/chromadb/
+
+# ide
+.vscode/
+.idea/
+*.swp
+*.swo
