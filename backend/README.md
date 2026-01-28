@@ -4,6 +4,22 @@ fastapi backend for querying epa regulatory pdfs using rag.
 
 ## setup
 
+### using uv (recommended)
+
+```bash
+# install uv if you don't have it
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# sync dependencies from pyproject.toml (creates venv automatically)
+uv sync
+
+# create .env file
+cp .env.example .env
+# add your api keys to .env
+```
+
+### alternative: traditional pip
+
 ```bash
 # create virtual environment
 python -m venv venv
@@ -44,10 +60,14 @@ backend/
 ## run
 
 ```bash
-# development
-python main.py
+# with uv (recommended)
+uv run python main.py
+# or
+uv run uvicorn main:app --reload
 
-# or with uvicorn
+# traditional way (if using venv)
+python main.py
+# or
 uvicorn main:app --reload
 
 # api will be at http://localhost:8000
