@@ -1,24 +1,91 @@
-"""langchain rag pipeline"""
+"""rag pipeline"""
 
-from typing import Generator
+import os
+from typing import Generator, Any
+from openai import OpenAI
+from google import genai
+from ml.retrieval import retrieve_relevant_chunks
 
+# config
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-def query_rag(question: str) -> Generator[str, None, None]:
+# clients
+# use openai client for openrouter
+or_client = None
+if OPENROUTER_API_KEY:
+    or_client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY
+    )
+
+google_client = None
+if GOOGLE_API_KEY:
+    google_client = genai.Client(api_key=GOOGLE_API_KEY)
+
+def query_rag(query: str) -> Generator[str, None, None]:
     """
-    query the rag pipeline with a question
-    
-    this is the main function that full-stack will call
+    answer a query using rag
     
     args:
-        question: user question
+        query: user question
         
     yields:
-        answer chunks for streaming
+        chunks of the answer (streaming)
     """
-    # TODO: implement rag pipeline
-    # 1. embed the question
-    # 2. retrieve top-k chunks from chromadb
-    # 3. build context from chunks
-    # 4. generate answer using openrouter llm
-    # 5. stream response
-    yield "not implemented yet"
+    if not query:
+        yield ""
+        return
+
+    # 1. retrieve context
+    chunks = retrieve_relevant_chunks(query, n_results=5)
+    context_text = "\n\n".join([c["text"] for c in chunks])
+    
+    # 2. construct prompt
+    system_prompt = (
+        "You are an expert EPA consultant helper. "
+        "Use the provided context to answer the user's question. "
+        "If the answer is not in the context, say you don't know."
+    )
+    
+    user_prompt = f"Context:\n{context_text}\n\nQuestion: {query}"
+    
+    # 3. generate answer (streaming)
+    # try openrouter first
+    if or_client:
+        try:
+            stream = or_client.chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                stream=True
+            )
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+            return
+        except Exception:
+            pass # fallback
+            
+    # fallback to google gemini
+    if google_client:
+        try:
+            # gemini streaming
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+            response = google_client.models.generate_content(
+                model="gemini-2.5-flash-lite", 
+                contents=full_prompt,
+                config=None
+            )
+            # simulate streaming for now
+            if hasattr(response, 'text') and response.text:
+                yield response.text
+                return
+        except Exception as e:
+            yield f"Error generating response: {e}"
+            return
+            
+    if not or_client and not google_client:
+        yield "Configuration Error: No API keys found (OpenRouter or Google)."
