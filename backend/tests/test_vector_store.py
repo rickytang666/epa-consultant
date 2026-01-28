@@ -48,3 +48,36 @@ def test_insert_chunks():
     # cleanup
     client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
     client.delete_collection(collection_name)
+
+def test_search_chunks():
+    """test searching chunks"""
+    collection_name = "test_search"
+    
+    # mock data
+    chunks = [
+        {"chunk_id": "1", "text": "apple", "metadata": {"type": "fruit"}},
+        {"chunk_id": "2", "text": "car", "metadata": {"type": "vehicle"}}
+    ]
+    
+    # mock orthogonal embeddings to ensure distinct search results
+    # dim 768
+    # vector 1: [1, 0, ...], vector 2: [0, 1, ...]
+    vec1 = [0.0] * 768
+    vec1[0] = 1.0
+    
+    vec2 = [0.0] * 768
+    vec2[1] = 1.0
+    
+    insert_chunks(chunks, [vec1, vec2], collection_name=collection_name)
+    
+    # search for vector 1 (should match "apple")
+    from ml.vector_store import search_chunks
+    results = search_chunks(query_embedding=vec1, n_results=1, collection_name=collection_name)
+    
+    assert len(results) == 1
+    assert results[0]["chunk_id"] == "1"
+    assert results[0]["text"] == "apple"
+    
+    # cleanup
+    client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
+    client.delete_collection(collection_name)

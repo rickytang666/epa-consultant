@@ -61,15 +61,38 @@ def insert_chunks(chunks: List[Dict[str, Any]], embeddings: List[List[float]], c
     )
 
 
-def search_chunks(query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
+def search_chunks(query_embedding: List[float], n_results: int = 5, collection_name: str = "epa_chunks") -> List[Dict[str, Any]]:
     """
     search for similar chunks
     
     args:
         query_embedding: query embedding vector
-        top_k: number of results to return
+        n_results: number of results to return
+        collection_name: name of the collection
         
     returns:
         list of most similar chunks with metadata
     """
-    pass
+    collection = init_vector_store(collection_name)
+    
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=n_results
+    )
+    
+    # chromadb returns lists of lists (batch format)
+    # we flatten manualy for the single query
+    
+    if not results['ids'] or not results['ids'][0]:
+        return []
+        
+    hits = []
+    for i in range(len(results['ids'][0])):
+        hits.append({
+            "chunk_id": results['ids'][0][i],
+            "text": results['documents'][0][i],
+            "metadata": results['metadatas'][0][i],
+            "distance": results['distances'][0][i] if results['distances'] else None
+        })
+        
+    return hits
