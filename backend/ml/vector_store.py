@@ -1,7 +1,13 @@
 """chromadb operations"""
 
 from typing import List, Dict, Any
+import os
+import chromadb
+from chromadb.config import Settings
 
+# persistence directory
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+CHROMA_DB_DIR = os.path.join(DATA_DIR, "chromadb")
 
 def init_vector_store(collection_name: str = "epa_chunks"):
     """
@@ -13,7 +19,20 @@ def init_vector_store(collection_name: str = "epa_chunks"):
     returns:
         chromadb collection object
     """
-    pass
+    # ensure data directory exists
+    os.makedirs(CHROMA_DB_DIR, exist_ok=True)
+    
+    # initialize persistent client
+    client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
+    
+    # get or create collection
+    # we use cosine similarity space by default
+    collection = client.get_or_create_collection(
+        name=collection_name, 
+        metadata={"hnsw:space": "cosine"}
+    )
+    
+    return collection
 
 
 def insert_chunks(chunks: List[Dict[str, Any]], embeddings: List[List[float]]):
