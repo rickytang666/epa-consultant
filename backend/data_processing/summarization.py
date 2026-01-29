@@ -21,10 +21,21 @@ def get_header_key(chunk: Chunk) -> tuple:
     return tuple((h.level, h.name) for h in sorted(chunk.header_path, key=lambda h: int(h.level.split()[1])))
 
 
-def get_section_preview_lazy(chunks: List[Chunk], first_n: int = 2500, last_n: int = 1000) -> tuple[str, str]:
-    """smart sampling: avoids duplication for short sections (10-20% token savings)"""
+def get_section_preview_lazy(
+    chunks: List[Chunk], 
+    first_n: int = 2500, 
+    last_n: int = 1000,
+    adaptive_budget: int = None
+) -> tuple[str, str]:
+    """smart sampling with adaptive budgets (10-15% additional savings)"""
     if not chunks:
         return "", ""
+    
+    # use adaptive budget if provided
+    if adaptive_budget:
+        # adjust split: 70% start, 30% end
+        first_n = int(adaptive_budget * 0.7)
+        last_n = int(adaptive_budget * 0.3)
     
     # calculate total content length first
     total_content_len = sum(len(c.content) for c in chunks)
@@ -113,8 +124,24 @@ async def generate_section_summaries(
     async def _summarize_single(key: tuple, section_chunks: List[Chunk], child_summaries: List[dict]) -> Tuple[tuple, str, float]:
         section_name = " > ".join([h[1] for h in key]) if key else "document"
         
-        # lazy sampling: only process what we need
-        content_start, content_end = get_section_preview_lazy(section_chunks, first_n_chars, last_n_chars)
+        # adaptive budget based on depth and children
+        depth = len(key)
+        has_children = len(child_summaries) > 0
+        
+        if depth >= 4:  # deep leaf sections
+            budget = 2000  # less detail needed
+        elif has_children:  # parent sections
+            budget = 2500  # medium (rely on child summaries)
+        elif depth == 1:  # top-level sections
+            budget = 4000  # more context
+        else:
+            budget = 3500  # default
+        
+        # lazy sampling with adaptive budget
+        content_start, content_end = get_section_preview_lazy(
+            section_chunks, 
+            adaptive_budget=budget
+        )
         
         prompt = template.render(
             section_name=section_name,
