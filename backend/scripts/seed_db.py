@@ -18,7 +18,15 @@ logger = logging.getLogger(__name__)
 def load_chunks(file_path: str) -> List[Dict[str, Any]]:
     """load chunks from json file"""
     with open(file_path, 'r') as f:
-        return json.load(f)
+        data = json.load(f)
+        
+    # handle new ProcessedDocument schema (dict with 'chunks' key)
+    if isinstance(data, dict) and "chunks" in data:
+        logger.info("detected ProcessedDocument schema in chunks.json")
+        return data["chunks"]
+        
+    # handle legacy/tables schema (list of chunks)
+    return data
 
 def prepare_chunk_for_store(item: Dict[str, Any]) -> Dict[str, Any]:
     """transform raw chunk into format for vector store"""
