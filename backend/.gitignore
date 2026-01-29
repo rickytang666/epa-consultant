@@ -28,7 +28,6 @@ uv.lock
 
 # data files
 data/*
-!data/*.pdf
 
 # testing
 .pytest_cache/
