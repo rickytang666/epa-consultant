@@ -15,6 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 
 from data_processing.pdf_extractor import extract_pdf_sync
 from data_processing.ingest import DocumentIngestor
+from data_processing.llm_client import LLMClient
 
 load_dotenv()
 
@@ -27,6 +28,39 @@ def main():
     parser.add_argument("--skip-summaries", action="store_true", help="Skip summary generation")
     parser.add_argument("--output-dir", default="data/processed", help="Output directory for processed JSON")
     args = parser.parse_args()
+    
+    # API Key Check for Graceful Degradation
+    openai_key = os.getenv("OPENAI_API_KEY")
+    google_key = os.getenv("GOOGLE_API_KEY")
+    
+    RED = "\033[91m"
+    BOLD = "\033[1m"
+    RESET = "\033[0m"
+    
+    # Determine if we need keys
+    needs_llm = not args.skip_summaries or args.fix_headers
+    
+    if needs_llm:
+        print("Checking API availability and quota...")
+        llm = LLMClient()
+        openai_ok = llm.validate_openai()
+        google_ok = llm.validate_gemini()
+        
+        if not openai_ok and not google_ok:
+            print(f"\n{BOLD}{RED}WARNING: API keys are invalid or quota exhausted!{RESET}")
+            print(f"{RED}Summaries and header correction require a working LLM.{RESET}")
+            print(f"{RED}REVERTING TO SKIP-SUMMARIES MODE.{RESET}\n")
+            args.skip_summaries = True
+            args.fix_headers = False
+        elif not openai_ok or not google_ok:
+            print(f"\n{BOLD}{RED}NOTE: One API provider is unavailable (Redundancy Limited){RESET}")
+            if not openai_ok:
+                print(f"{RED}  - OpenAI is unavailable (invalid key or quota hit). Using Gemini fallback.{RESET}")
+            if not google_ok:
+                print(f"{RED}  - Gemini is unavailable (invalid key or quota hit). No fallback if OpenAI fails.{RESET}")
+            print()
+        else:
+            print(f"✓ All API systems operational.\n")
 
     if not os.path.exists(args.pdf_path):
         print(f"Error: PDF file not found: {args.pdf_path}")

@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from data_processing.ingest import DocumentIngestor
+from data_processing.llm_client import LLMClient
 
 # Load env vars
 load_dotenv()
@@ -33,15 +34,26 @@ def main():
     needs_llm = not args.skip_summaries or args.fix_headers
     
     if needs_llm:
-        if not openai_key or not google_key:
-            print(f"\n{BOLD}{RED}CRITICAL ERROR: Missing API keys!{RESET}")
-            if not openai_key:
-                print(f"{RED}  - OPENAI_API_KEY is missing{RESET}")
-            if not google_key:
-                print(f"{RED}  - GOOGLE_API_KEY is missing{RESET}")
-            print(f"{RED}Sprint 2 requires BOTH keys for high availability/redundancy.{RESET}")
-            print(f"{RED}Terminating.{RESET}\n")
-            sys.exit(1)
+        print("Checking API availability and quota...")
+        llm = LLMClient()
+        openai_ok = llm.validate_openai()
+        google_ok = llm.validate_gemini()
+        
+        if not openai_ok and not google_ok:
+            print(f"\n{BOLD}{RED}WARNING: API keys are invalid or quota exhausted!{RESET}")
+            print(f"{RED}Summaries and header correction require a working LLM.{RESET}")
+            print(f"{RED}REVERTING TO SKIP-SUMMARIES MODE.{RESET}\n")
+            args.skip_summaries = True
+            args.fix_headers = False
+        elif not openai_ok or not google_ok:
+            print(f"\n{BOLD}{RED}NOTE: One API provider is unavailable (Redundancy Limited){RESET}")
+            if not openai_ok:
+                print(f"{RED}  - OpenAI is unavailable (invalid key or quota hit). Using Gemini fallback.{RESET}")
+            if not google_ok:
+                print(f"{RED}  - Gemini is unavailable (invalid key or quota hit). No fallback if OpenAI fails.{RESET}")
+            print()
+        else:
+            print(f"✓ All API systems operational.\n")
 
     extracted_dir = os.path.abspath("data/extracted")
     processed_dir = os.path.abspath("data/processed")

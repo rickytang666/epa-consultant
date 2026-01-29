@@ -60,6 +60,46 @@ class LLMClient:
             except Exception as e:
                 logger.warning(f"Failed to initialize Gemini: {e}")
         return self._gemini_model
+
+    def validate_openai(self, model: str = "gpt-5-mini") -> bool:
+        """
+        Validate OpenAI key and quota by doing a minimal test call.
+        Returns True if working, False otherwise.
+        """
+        client = self._init_openai()
+        if not client:
+            return False
+            
+        try:
+            client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": "hi"}],
+                max_tokens=1
+            )
+            return True
+        except Exception as e:
+            logger.warning(f"OpenAI validation failed: {e}")
+            return False
+
+    def validate_gemini(self) -> bool:
+        """
+        Validate Gemini key and quota by doing a minimal test call.
+        Returns True if working, False otherwise.
+        """
+        client = self._init_gemini()
+        if not client:
+            return False
+            
+        try:
+            client.models.generate_content(
+                model="gemini-2.5-flash-lite",
+                contents="hi",
+                config={"max_output_tokens": 1}
+            )
+            return True
+        except Exception as e:
+            logger.warning(f"Gemini validation failed: {e}")
+            return False
     
     def chat_completion(
         self,
