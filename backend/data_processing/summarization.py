@@ -55,6 +55,21 @@ def get_section_preview_lazy(chunks: List[Chunk], first_n: int = 2500, last_n: i
     return ''.join(start_parts), ''.join(end_parts)
 
 
+def build_hierarchy_index(section_keys: List[tuple]) -> Dict[tuple, List[tuple]]:
+    """pre-compute parent-child relationships for O(1) lookups (replaces O(n²) nested loops)"""
+    from collections import defaultdict
+    
+    parent_to_children = defaultdict(list)
+    
+    for key in section_keys:
+        if len(key) > 0:
+            # parent is the key without the last element
+            parent_key = key[:-1] if len(key) > 1 else ()
+            parent_to_children[parent_key].append(key)
+    
+    return dict(parent_to_children)
+
+
 async def generate_section_summaries(
     chunks: List[Chunk],
     llm_client: LLMClient,
@@ -84,9 +99,12 @@ async def generate_section_summaries(
             level_num = int(last_header_level.split()[1])
             levels.add(level_num)
     
-    sorted_levels = sorted(levels, reverse=True)  # Deepest first
+    sorted_levels = sorted(levels, reverse=True)  # deepest first
     summaries: Dict[tuple, str] = {}
     total_cost = 0.0
+    
+    # build hierarchy index once for O(1) child lookups (replace nested loops)
+    hierarchy = build_hierarchy_index(list(sections.keys()))
     
     # helper: summarize single section
     async def _summarize_single(key: tuple, section_chunks: List[Chunk], child_summaries: List[dict]) -> Tuple[tuple, str, float]:
@@ -128,12 +146,13 @@ async def generate_section_summaries(
         
         tasks = []
         for key, section_chunks in level_sections:
-            # find direct children summaries
-            child_sums = []
-            for child_key, child_summary in summaries.items():
-                # check if child_key starts with key (is a child) and is deeper
-                if child_key and len(child_key) > len(key) and child_key[:len(key)] == key:
-                    child_sums.append({"name": child_key[-1][1], "summary": child_summary})
+            # O(1) lookup for direct children using pre-computed index
+            child_keys = hierarchy.get(key, [])
+            child_sums = [
+                {"name": child_key[-1][1], "summary": summaries[child_key]}
+                for child_key in child_keys
+                if child_key in summaries
+            ]
             
             tasks.append(_summarize_single(key, section_chunks, child_sums))
         
