@@ -3,25 +3,37 @@ import json
 import sys
 import os
 
-# Add backend directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import argparse
+from scripts.tests.utils import load_or_extract_pdf
 
+# Add backend directory to path
 from data_processing.ingest import DocumentIngestor
 
 def main():
-    # Load JSON
-    with open("data/raw/test.json", "r") as f:
-        data = json.load(f)
-    
+    parser = argparse.ArgumentParser(description="Demonstrate skeleton summary generation.")
+    parser.add_argument("file_path", help="Path to the PDF or JSON file to process.")
+    parser.add_argument("--fix-headers", action="store_true", help="Enable header correction.")
+    args = parser.parse_args()
+
+    # Load data (auto-extracts if PDF)
+    try:
+        data = load_or_extract_pdf(args.file_path)
+    except Exception as e:
+        print(f"Error loading file: {e}")
+        return
+
     markdown = data["markdown"]
-    print("Loaded markdown data.")
+    filename = os.path.basename(args.file_path)
+    
+    print(f"Loaded markdown data from {filename}.")
+    print(f"Header Correction: {'Enabled' if args.fix_headers else 'Disabled'}")
     
     # Run the pipeline
     print("Running ingestion pipeline...")
-    ingestor = DocumentIngestor(fix_headers=True)
+    ingestor = DocumentIngestor(fix_headers=args.fix_headers)
     doc = ingestor.ingest(
         markdown_text=markdown, 
-        filename="test.pdf"
+        filename=filename
     )
     
     print(f"Total pages: {doc.total_pages}")
@@ -33,11 +45,15 @@ def main():
     print("GENERATING SKELETON SUMMARIES")
     print("=" * 60)
     
-    summaries = ingestor.generate_skeleton_summaries_sync(doc.section_chunks)
+    summaries, summary_cost = ingestor.generate_skeleton_summaries_sync(doc.section_chunks)
+    
+    # Update doc costs for display/completeness
+    doc.costs["skeleton_summaries"] = summary_cost
+    doc.costs["total"] = doc.costs.get("header_correction", 0.0) + summary_cost
     
     print()
     print("=" * 60)
-    print("SKELETON SUMMARIES REPORT")
+    print("SKELETON SUMMARIES GENERATED")
     print("=" * 60)
     
     sorted_keys = sorted(summaries.keys(), key=lambda k: (len(k), k))
@@ -58,6 +74,10 @@ def main():
         print(f"{indent}  {summary}")
         print("-" * 60)
     
+    print()
+    print("=" * 60)
+    print(f"Total Cost: ${ingestor.total_cost:.6f}")
+    print("=" * 60)
     print()
 
 if __name__ == "__main__":

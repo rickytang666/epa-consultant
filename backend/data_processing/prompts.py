@@ -16,3 +16,8 @@ def get_header_correction_template():
 def get_section_summary_template():
     """Load the section summary prompt template."""
     return _env.get_template("section_summary.jinja2")
+
+
+def get_document_summary_template():
+    """Load the document summary prompt template."""
+    return _env.get_template("document_summary.jinja2")

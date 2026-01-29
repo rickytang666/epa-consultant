@@ -1,0 +1,39 @@
+{
+  "status": "complete",
+  "output_format": "markdown",
+  "chunks": null,
+  "json": null,
+  "markdown": "\n\n{0}------------------------------------------------\n\n# **Sample Company** **Income Statement (Service)** **For the Year Ended September 30, 2021**\n\n|                          |            |              |\n|--------------------------|------------|--------------|\n| Service revenue          |            | \\$2,750      |\n| Operating Expenses:      |            |              |\n| Depreciation expense     | 100        |              |\n| Wages expenses           | 1,200      |              |\n| Supplies expenses        | <u>60</u>  |              |\n| Total operating expenses |            | <u>1,360</u> |\n| Operating Income         |            | 1,390        |\n| Other Item:              |            |              |\n| Interest expense         | <u>40</u>  |              |\n| Pretax income            |            | 1,350        |\n| Income tax expense       | <u>405</u> |              |\n| Net income               |            | <u>\\$945</u> |\n\n# **Sample Company** **Statement of Retained Earnings** **For the Year Ended September 30, 2021**\n\n|                             | <u><b>Retained Earnings</b></u> |\n|-----------------------------|---------------------------------|\n| Balance, October 1, 2020    | \\$ 820                          |\n| Net income                  | 945                             |\n| Dividends declared          | <u>(500)</u>                    |\n| Balance, September 30, 2021 | <u>\\$1,265</u>                  |\n\n{1}------------------------------------------------\n\n# **Sample Company** **Income Statement (Product)** **For the Year Ended September 30, 2021**\n\n|                          |            |                 |\n|--------------------------|------------|-----------------|\n| Sales revenue            |            | \\$6,875         |\n| Cost of Goods Sold       |            | <u>( 4,125)</u> |\n| Gross Profit             |            | \\$2,750         |\n| Operating Expenses:      |            |                 |\n| Depreciation expense     | 100        |                 |\n| Wages expenses           | 1,200      |                 |\n| Supplies expenses        | <u>60</u>  |                 |\n| Total operating expenses |            | <u>1,360</u>    |\n| Operating Income         |            | 1,390           |\n| Other Item:              |            |                 |\n| Interest expense         | <u>40</u>  |                 |\n| Pretax income            |            | <u>1,350</u>    |\n| Income tax expense       | <u>405</u> |                 |\n| Net income               |            | <u>\\$945</u>    |\n\n# **Sample Company** **Statement of Retained Earnings** **For the Year Ended September 30, 2021**\n\n|                             |                                 |\n|-----------------------------|---------------------------------|\n|                             | <u><b>Retained Earnings</b></u> |\n| Balance, October 1, 2020    | \\$ 820                          |\n| Net income                  | 945                             |\n| Dividends declared          | <u>(500)</u>                    |\n| Balance, September 30, 2021 | <u><u>\\$1,265</u></u>           |\n\n{2}------------------------------------------------\n\n# **Sample Company** **Balance Sheet** **September 30, 2021**\n\n| <b>Assets</b>             |                        | <b>Liabilities and Stockholders' Equity</b> |                        |\n|---------------------------|------------------------|---------------------------------------------|------------------------|\n| <u>Current Assets:</u>    |                        | <u>Current Liabilities:</u>                 |                        |\n| Cash                      | \\$ 1,550               | Accounts payable                            | \\$60                   |\n| Accounts receivable       | 770                    | Interest payable                            | 80                     |\n| Supplies                  | <u>40</u>              | Wages payable                               | 100                    |\n| Total current assets      | 2,360                  | Income taxes payable                        | 405                    |\n|                           |                        | Utilities payable                           | <u>250</u>             |\n|                           |                        | Total Current Liabilities                   | 895                    |\n| Equipment                 | 12,000                 | Long-term Notes Payable                     | 8,000                  |\n| Less: Accumulated deprec. | <u>(1,300)</u>         |                                             |                        |\n|                           | 10,700                 | <u>Owners' Equity:</u>                      |                        |\n|                           |                        | Owners' capital                             | 2,900                  |\n|                           |                        | Retained earnings                           | <u>1,265</u>           |\n|                           |                        | Total equity                                |                        |\n|                           |                        |                                             | <u>4,165</u>           |\n| <b>Total assets</b>       | <b><u>\\$13,060</u></b> | <b>Total liabilities and owners' equity</b> | <b><u>\\$13,060</u></b> |\n\n---",
+  "html": null,
+  "extraction_schema_json": null,
+  "segmentation_results": null,
+  "images": {},
+  "metadata": {
+    "page_stats": [
+      {
+        "page_id": 0,
+        "num_blocks": 4
+      },
+      {
+        "page_id": 1,
+        "num_blocks": 4
+      },
+      {
+        "page_id": 2,
+        "num_blocks": 2
+      }
+    ]
+  },
+  "success": true,
+  "error": "",
+  "parse_quality_score": null,
+  "page_count": 3,
+  "total_cost": 1,
+  "cost_breakdown": {
+    "list_cost_cents": 2,
+    "final_cost_cents": 1
+  },
+  "runtime": 0.019822359085083008,
+  "checkpoint_id": null,
+  "versions": null
+}
