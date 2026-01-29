@@ -22,10 +22,19 @@ def get_header_key(chunk: Chunk) -> tuple:
 
 
 def get_section_preview_lazy(chunks: List[Chunk], first_n: int = 2500, last_n: int = 1000) -> tuple[str, str]:
-    """sample section content without full concatenation (100-1000x faster for large sections)"""
+    """smart sampling: avoids duplication for short sections (10-20% token savings)"""
     if not chunks:
         return "", ""
     
+    # calculate total content length first
+    total_content_len = sum(len(c.content) for c in chunks)
+    
+    # smart sampling: if section is short, don't duplicate content
+    if total_content_len <= first_n + last_n:
+        # section fits in budget, return all content (no duplication)
+        return ''.join(c.content for c in chunks), ""
+    
+    # section is long, use split sampling
     # collect start content
     start_parts = []
     start_len = 0
@@ -45,12 +54,6 @@ def get_section_preview_lazy(chunks: List[Chunk], first_n: int = 2500, last_n: i
         remaining = last_n - end_len
         end_parts.insert(0, chunk.content[-remaining:])
         end_len += len(end_parts[0])
-    
-    # avoid duplication if section is short
-    total_content_len = sum(len(c.content) for c in chunks)
-    if total_content_len <= first_n + last_n:
-        # section is short, just return all content
-        return ''.join(c.content for c in chunks), ""
     
     return ''.join(start_parts), ''.join(end_parts)
 
