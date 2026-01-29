@@ -27,8 +27,6 @@ virtualenv/
 uv.lock
 
 # data files
-data/raw/*.pdf
-data/processed/*.json
 data/chromadb/*
 !data/chromadb/.gitkeep
 

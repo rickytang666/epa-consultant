@@ -1,0 +1,132 @@
+{
+  "document_id": "266b655a-beef-4c32-bc71-e62ac52034fa",
+  "filename": "test_2: financial_statement.pdf",
+  "document_summary": "For the year ended September 30, 2021 Sample Company reported service revenue of $2,750 and product sales of $6,875 (product gross profit $2,750), with total operating expenses of $1,360, interest expense of $40 and income tax of $405, resulting in pretax income of $1,350 and net income of $945. Retained earnings increased from $820 to $1,265 after the addition of net income and payment of $500 in dividends. At year-end total assets were $13,060 (current assets $2,360 and net equipment $10,700), total liabilities were $8,895 (including an $8,000 long-term note), and total owners\u2019 equity was $4,165 (owners\u2019 capital $2,900; retained earnings $1,265). Overall the company was profitable and maintains positive equity despite significant long-term debt.",
+  "section_summaries": {
+    "**Sample Company** **Income Statement (Service)** **For the Year Ended September 30, 2021**": "Sample Company\u2019s service income statement for the year ended September 30, 2021 shows service revenue of $2,750, total operating expenses of $1,360 (depreciation $100, wages $1,200, supplies $60) yielding operating income of $1,390; after $40 interest expense and $405 income tax, pretax income is $1,350 and net income is $945.",
+    "**Sample Company** **Statement of Retained Earnings** **For the Year Ended September 30, 2021**": "Statement of Retained Earnings for Sample Company for the year ended September 30, 2021 showing a beginning balance of $820 (Oct 1, 2020), net income of $945, dividends declared of $500, and an ending retained earnings balance of $1,265.",
+    "**Sample Company** **Income Statement (Product)** **For the Year Ended September 30, 2021**": "Sample Company\u2019s Product income statement for the year ended September 30, 2021 shows sales of $6,875, COGS of $4,125 and gross profit of $2,750. After $1,360 total operating expenses (including depreciation, wages and supplies) and $40 interest, pretax income is $1,350, income tax $405, and net income $945.",
+    "**Sample Company** **Balance Sheet** **September 30, 2021**": "Sample Company balance sheet as of September 30, 2021 shows total assets of $13,060 (current assets $2,360 including cash $1,550 and AR $770; net equipment $10,700 after $1,300 accumulated depreciation). Total liabilities are $8,895 (current liabilities $895 and long-term notes payable $8,000), and total owners' equity is $4,165 (owners' capital $2,900; retained earnings $1,265)."
+  },
+  "header_tree": {
+    "**Sample Company** **Income Statement (Service)** **For the Year Ended September 30, 2021**": {},
+    "**Sample Company** **Statement of Retained Earnings** **For the Year Ended September 30, 2021**": {},
+    "**Sample Company** **Income Statement (Product)** **For the Year Ended September 30, 2021**": {},
+    "**Sample Company** **Balance Sheet** **September 30, 2021**": {}
+  },
+  "costs": {
+    "header_correction": 0.0,
+    "skeleton_summaries": 0.0032199999999999998,
+    "total": 0.00385675,
+    "document_summary": 0.00063675
+  },
+  "chunks": [
+    {
+      "document_id": "266b655a-beef-4c32-bc71-e62ac52034fa",
+      "content": "|                          |            |              |\n|--------------------------|------------|--------------|\n| Service revenue          |            | \\$2,750      |\n| Operating Expenses:      |            |              |\n| Depreciation expense     | 100        |              |\n| Wages expenses           | 1,200      |              |\n| Supplies expenses        | <u>60</u>  |              |\n| Total operating expenses |            | <u>1,360</u> |\n| Operating Income         |            | 1,390        |\n| Other Item:              |            |              |\n| Interest expense         | <u>40</u>  |              |\n| Pretax income            |            | 1,350        |\n| Income tax expense       | <u>405</u> |              |\n| Net income               |            | <u>\\$945</u> |",
+      "chunk_index": 1,
+      "location": {
+        "page_number": 1
+      },
+      "header_path": [
+        {
+          "level": "Header 1",
+          "name": "**Sample Company** **Income Statement (Service)** **For the Year Ended September 30, 2021**"
+        }
+      ],
+      "metadata": {
+        "Header 1": "**Sample Company** **Income Statement (Service)** **For the Year Ended September 30, 2021**",
+        "type": "table"
+      }
+    },
+    {
+      "document_id": "266b655a-beef-4c32-bc71-e62ac52034fa",
+      "content": "|                             | <u><b>Retained Earnings</b></u> |\n|-----------------------------|---------------------------------|\n| Balance, October 1, 2020    | \\$ 820                          |\n| Net income                  | 945                             |\n| Dividends declared          | <u>(500)</u>                    |\n| Balance, September 30, 2021 | <u>\\$1,265</u>                  |",
+      "chunk_index": 2,
+      "location": {
+        "page_number": 1
+      },
+      "header_path": [
+        {
+          "level": "Header 1",
+          "name": "**Sample Company** **Statement of Retained Earnings** **For the Year Ended September 30, 2021**"
+        }
+      ],
+      "metadata": {
+        "Header 1": "**Sample Company** **Statement of Retained Earnings** **For the Year Ended September 30, 2021**",
+        "type": "table"
+      }
+    },
+    {
+      "document_id": "266b655a-beef-4c32-bc71-e62ac52034fa",
+      "content": "|                          |            |                 |\n|--------------------------|------------|-----------------|\n| Sales revenue            |            | \\$6,875         |\n| Cost of Goods Sold       |            | <u>( 4,125)</u> |\n| Gross Profit             |            | \\$2,750         |\n| Operating Expenses:      |            |                 |\n| Depreciation expense     | 100        |                 |\n| Wages expenses           | 1,200      |                 |\n| Supplies expenses        | <u>60</u>  |                 |\n| Total operating expenses |            | <u>1,360</u>    |\n| Operating Income         |            | 1,390           |\n| Other Item:              |            |                 |\n| Interest expense         | <u>40</u>  |                 |\n| Pretax income            |            | <u>1,350</u>    |\n| Income tax expense       | <u>405</u> |                 |\n| Net income               |            | <u>\\$945</u>    |",
+      "chunk_index": 3,
+      "location": {
+        "page_number": 2
+      },
+      "header_path": [
+        {
+          "level": "Header 1",
+          "name": "**Sample Company** **Income Statement (Product)** **For the Year Ended September 30, 2021**"
+        }
+      ],
+      "metadata": {
+        "Header 1": "**Sample Company** **Income Statement (Product)** **For the Year Ended September 30, 2021**",
+        "type": "table"
+      }
+    },
+    {
+      "document_id": "266b655a-beef-4c32-bc71-e62ac52034fa",
+      "content": "|                             |                                 |\n|-----------------------------|---------------------------------|\n|                             | <u><b>Retained Earnings</b></u> |\n| Balance, October 1, 2020    | \\$ 820                          |\n| Net income                  | 945                             |\n| Dividends declared          | <u>(500)</u>                    |\n| Balance, September 30, 2021 | <u><u>\\$1,265</u></u>           |",
+      "chunk_index": 4,
+      "location": {
+        "page_number": 2
+      },
+      "header_path": [
+        {
+          "level": "Header 1",
+          "name": "**Sample Company** **Statement of Retained Earnings** **For the Year Ended September 30, 2021**"
+        }
+      ],
+      "metadata": {
+        "Header 1": "**Sample Company** **Statement of Retained Earnings** **For the Year Ended September 30, 2021**",
+        "type": "table"
+      }
+    },
+    {
+      "document_id": "266b655a-beef-4c32-bc71-e62ac52034fa",
+      "content": "| <b>Assets</b>             |                        | <b>Liabilities and Stockholders' Equity</b> |                        |\n|---------------------------|------------------------|---------------------------------------------|------------------------|\n| <u>Current Assets:</u>    |                        | <u>Current Liabilities:</u>                 |                        |\n| Cash                      | \\$ 1,550               | Accounts payable                            | \\$60                   |\n| Accounts receivable       | 770                    | Interest payable                            | 80                     |\n| Supplies                  | <u>40</u>              | Wages payable                               | 100                    |\n| Total current assets      | 2,360                  | Income taxes payable                        | 405                    |\n|                           |                        | Utilities payable                           | <u>250</u>             |\n|                           |                        | Total Current Liabilities                   | 895                    |\n| Equipment                 | 12,000                 | Long-term Notes Payable                     | 8,000                  |\n| Less: Accumulated deprec. | <u>(1,300)</u>         |                                             |                        |\n|                           | 10,700                 | <u>Owners' Equity:</u>                      |                        |\n|                           |                        | Owners' capital                             | 2,900                  |\n|                           |                        | Retained earnings                           | <u>1,265</u>           |\n|                           |                        | Total equity                                |                        |\n|                           |                        |                                             | <u>4,165</u>           |\n| <b>Total assets</b>       | <b><u>\\$13,060</u></b> | <b>Total liabilities and owners' equity</b> | <b><u>\\$13,060</u></b> |",
+      "chunk_index": 5,
+      "location": {
+        "page_number": 3
+      },
+      "header_path": [
+        {
+          "level": "Header 1",
+          "name": "**Sample Company** **Balance Sheet** **September 30, 2021**"
+        }
+      ],
+      "metadata": {
+        "Header 1": "**Sample Company** **Balance Sheet** **September 30, 2021**",
+        "type": "table"
+      }
+    },
+    {
+      "document_id": "266b655a-beef-4c32-bc71-e62ac52034fa",
+      "content": "---",
+      "chunk_index": 6,
+      "location": {
+        "page_number": 3
+      },
+      "header_path": [
+        {
+          "level": "Header 1",
+          "name": "**Sample Company** **Balance Sheet** **September 30, 2021**"
+        }
+      ],
+      "metadata": {
+        "Header 1": "**Sample Company** **Balance Sheet** **September 30, 2021**"
+      }
+    }
+  ]
+}
