@@ -24,7 +24,7 @@ def main():
     )
     parser.add_argument("pdf_path", help="Path to PDF file to process")
     parser.add_argument("--fix-headers", action="store_true", help="Enable header correction LLM step")
-    parser.add_argument("--skip-summaries", action="store_true", default=True, help="Skip summary generation (default: True for MVP)")
+    parser.add_argument("--skip-summaries", action="store_true", help="Skip summary generation")
     parser.add_argument("--output-dir", default="data/processed", help="Output directory for processed JSON")
     args = parser.parse_args()
 
@@ -78,11 +78,10 @@ def main():
     # Step 3: Save output
     os.makedirs(args.output_dir, exist_ok=True)
     
-    # Save chunks.json
+    # Save Chunks & Summaries (Full ProcessedDocument)
     chunks_path = os.path.join(args.output_dir, "chunks.json")
-    chunks_data = [chunk.model_dump() for chunk in doc.chunks]
     
-    # Save tables.json (extract table chunks)
+    # Save tables.json (extract table chunks for separate view)
     tables_path = os.path.join(args.output_dir, "tables.json")
     tables_data = [
         chunk.model_dump() 
@@ -91,11 +90,11 @@ def main():
     ]
     
     try:
-        # Write chunks
+        # Write full document to chunks.json
         with open(chunks_path, "w") as f:
-            json.dump(chunks_data, f, indent=2, default=str)
+            json.dump(doc.model_dump(), f, indent=2, default=str)
         
-        # Write tables
+        # Write tables only to tables.json (as a list of chunks)
         with open(tables_path, "w") as f:
             json.dump(tables_data, f, indent=2, default=str)
         

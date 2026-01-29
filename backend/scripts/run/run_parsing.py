@@ -83,11 +83,10 @@ def main():
             
             # Save output as separate files
             
-            # Save chunks.json
+            # Save Chunks & Summaries (Full ProcessedDocument)
             chunks_path = os.path.join(processed_dir, "chunks.json")
-            chunks_data = [chunk.model_dump() for chunk in doc.chunks]
             
-            # Save tables.json
+            # Save tables.json (extract table chunks for separate view)
             tables_path = os.path.join(processed_dir, "tables.json")
             tables_data = [
                 chunk.model_dump() 
@@ -95,9 +94,11 @@ def main():
                 if chunk.metadata.is_table
             ]
             
+            # Write full document to chunks.json
             with open(chunks_path, "w") as f:
-                json.dump(chunks_data, f, indent=2, default=str)
+                json.dump(doc.model_dump(), f, indent=2, default=str)
             
+            # Write tables only to tables.json (as a list of chunks)
             with open(tables_path, "w") as f:
                 json.dump(tables_data, f, indent=2, default=str)
                 
