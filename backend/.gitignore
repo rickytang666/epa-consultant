@@ -27,8 +27,8 @@ virtualenv/
 uv.lock
 
 # data files
-data/chromadb/*
-!data/chromadb/.gitkeep
+data/*
+!data/*.pdf
 
 # testing
 .pytest_cache/
