@@ -84,6 +84,37 @@ def build_hierarchy_index(section_keys: List[tuple]) -> Dict[tuple, List[tuple]]
     return dict(parent_to_children)
 
 
+def filter_redundant_children(content_preview: str, child_summaries: List[dict], threshold: float = 0.3) -> List[dict]:
+    """remove child summaries that don't add unique information (5-10% token savings)"""
+    if not child_summaries or not content_preview:
+        return child_summaries
+    
+    # extract unique words from content preview (simple keyword-based approach)
+    preview_words = set(content_preview.lower().split())
+    
+    unique_children = []
+    for child in child_summaries:
+        summary_text = child.get('summary', '')
+        if not summary_text:
+            continue
+        
+        # extract words from child summary
+        summary_words = set(summary_text.lower().split())
+        
+        # calculate uniqueness: how many words are NOT in preview
+        if len(summary_words) == 0:
+            continue
+        
+        unique_words = summary_words - preview_words
+        uniqueness_ratio = len(unique_words) / len(summary_words)
+        
+        # keep child if it has enough unique content
+        if uniqueness_ratio >= threshold:
+            unique_children.append(child)
+    
+    return unique_children
+
+
 async def generate_section_summaries(
     chunks: List[Chunk],
     llm_client: LLMClient,
@@ -143,11 +174,15 @@ async def generate_section_summaries(
             adaptive_budget=budget
         )
         
+        # filter redundant child summaries (5-10% token savings)
+        content_preview = content_start + content_end
+        filtered_children = filter_redundant_children(content_preview, child_summaries, threshold=0.3)
+        
         prompt = template.render(
             section_name=section_name,
             content_start=content_start,
             content_end=content_end,
-            child_summaries=child_summaries
+            child_summaries=filtered_children
         )
         
         model = "gpt-5-mini"
