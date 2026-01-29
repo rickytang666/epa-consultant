@@ -1,0 +1,161 @@
+"""
+LLM-based summarization for sections and documents (Sprint 2 feature).
+"""
+
+import asyncio
+import logging
+from typing import List, Dict, Tuple
+
+from .models import SectionSummary
+from .prompts import get_section_summary_template, get_document_summary_template
+from .llm_client import LLMClient
+from shared.schemas import Chunk
+
+logger = logging.getLogger(__name__)
+
+
+def get_header_key(chunk: Chunk) -> tuple:
+    """Extract header key from chunk for grouping."""
+    if not chunk.header_path:
+        return ()
+    return tuple((h.level, h.name) for h in sorted(chunk.header_path, key=lambda h: int(h.level.split()[1])))
+
+
+async def generate_section_summaries(
+    chunks: List[Chunk],
+    llm_client: LLMClient,
+    first_n_chars: int = 2500,
+    last_n_chars: int = 1000
+) -> Tuple[Dict[tuple, str], float]:
+    """
+    Generate hierarchical summaries for sections, bottom-up.
+    """
+    logger.info("Starting skeleton summary generation...")
+    template = get_section_summary_template()
+    
+    # Group chunks by header_path
+    sections: Dict[tuple, str] = {}
+    for chunk in chunks:
+        key = get_header_key(chunk)
+        if key not in sections:
+            sections[key] = chunk.content
+        else:
+            sections[key] += chunk.content
+    
+    # Find unique levels
+    levels = set()
+    for key in sections:
+        if key:
+            # Key[-1] is the last header in path: (Level, Name)
+            last_header_level = key[-1][0]  # e.g., "Header 3"
+            level_num = int(last_header_level.split()[1])
+            levels.add(level_num)
+    
+    sorted_levels = sorted(levels, reverse=True)  # Deepest first
+    summaries: Dict[tuple, str] = {}
+    total_cost = 0.0
+    
+    # Helper component task
+    async def _summarize_single(key: tuple, content: str, child_summaries: List[dict]) -> Tuple[tuple, str, float]:
+        section_name = " > ".join([h[1] for h in key]) if key else "Document"
+        content_start = content[:first_n_chars]
+        content_end = content[-last_n_chars:] if len(content) > first_n_chars + last_n_chars else ""
+        
+        prompt = template.render(
+            section_name=section_name,
+            content_start=content_start,
+            content_end=content_end,
+            child_summaries=child_summaries
+        )
+        
+        model = "gpt-5-mini"
+        try:
+            response, cost = await llm_client.async_chat_completion(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                response_format=SectionSummary
+            )
+            
+            logger.info(f"Summarized '{section_name}'")
+            
+            return key, response.choices[0].message.parsed.summary, cost
+        except Exception as e:
+            logger.error(f"Summary failed for {section_name}: {e}")
+            return key, "", 0.0
+
+    # Process levels
+    for level in sorted_levels:
+        logger.info(f"Processing Level {level}...")
+        # Get all sections at this level
+        level_sections = [
+            (k, v) for k, v in sections.items() 
+            if k and int(k[-1][0].split()[1]) == level
+        ]
+        
+        tasks = []
+        for key, content in level_sections:
+            # Find direct children summaries
+            child_sums = []
+            for child_key, child_summary in summaries.items():
+                # Check if child_key starts with key (is a child) and is deeper
+                if child_key and len(child_key) > len(key) and child_key[:len(key)] == key:
+                    child_sums.append({"name": child_key[-1][1], "summary": child_summary})
+            
+            tasks.append(_summarize_single(key, content, child_sums))
+        
+        if tasks:
+            results = await asyncio.gather(*tasks)
+            for key, summary, cost in results:
+                summaries[key] = summary
+                total_cost += cost
+    
+    logger.info(f"Summary generation complete. Total Cost: ${total_cost:.4f}")
+    return summaries, total_cost
+
+
+def generate_section_summaries_sync(
+    chunks: List[Chunk],
+    llm_client: LLMClient,
+    first_n_chars: int = 2500,
+    last_n_chars: int = 1000
+) -> Tuple[Dict[tuple, str], float]:
+    """Sync wrapper for generate_section_summaries."""
+    return asyncio.run(generate_section_summaries(chunks, llm_client, first_n_chars, last_n_chars))
+
+
+def generate_document_summary(
+    section_summaries: Dict[tuple, str],
+    llm_client: LLMClient,
+    filename: str = ""
+) -> Tuple[str, float]:
+    """Generate a 2-8 sentence document summary from skeleton summaries."""
+    if not section_summaries:
+        return "", 0.0
+    
+    # Build sections list for template
+    sections = []
+    for key, summary in section_summaries.items():
+        if not summary:
+            continue
+        if isinstance(key, tuple):
+            name = ' > '.join([h[1] for h in key])
+        else:
+            name = str(key)
+        sections.append({"name": name, "summary": summary})
+    
+    template = get_document_summary_template()
+    prompt = template.render(filename=filename, sections=sections)
+    
+    model = "gpt-5-mini"
+    try:
+        response, cost = llm_client.chat_completion(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            reasoning_effort="low"
+        )
+        content = response.choices[0].message.content or ""
+        logger.info(f"Document Summary | Cost: ${cost:.6f}")
+        return content.strip(), cost
+    except Exception as e:
+        logger.error(f"Document summary failed: {e}")
+        return "", 0.0

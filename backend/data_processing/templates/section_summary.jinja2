@@ -1,0 +1,22 @@
+You are summarizing a section of a technical document for use in a RAG (Retrieval-Augmented Generation) system.
+
+The summary will be used to help users quickly understand what this section contains and to improve search relevance.
+
+SECTION: {{ section_name }}
+
+CONTENT PREVIEW (beginning):
+{{ content_start }}
+
+{% if content_end %}
+CONTENT PREVIEW (end):
+{{ content_end }}
+{% endif %}
+
+{% if child_summaries %}
+SUMMARIES OF SUBSECTIONS:
+{% for child in child_summaries %}
+- {{ child.name }}: {{ child.summary }}
+{% endfor %}
+{% endif %}
+
+Write a concise summary (1-4 sentences) that captures the key points of this section. Focus on what information users might search for.
