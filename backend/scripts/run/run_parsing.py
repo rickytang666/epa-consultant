@@ -29,11 +29,18 @@ def main():
     BOLD = "\033[1m"
     RESET = "\033[0m"
     
-    if not args.skip_summaries or args.fix_headers:
-        if not openai_key and not google_key:
-            print(f"\n{BOLD}{RED}CRITICAL ERROR: No API keys found!{RESET}")
-            print(f"{RED}Please set OPENAI_API_KEY or GOOGLE_API_KEY in your .env file or environment.{RESET}")
-            print(f"{RED}Summaries or header correction require an LLM.{RESET}\n")
+    # Determine if we need keys
+    needs_llm = not args.skip_summaries or args.fix_headers
+    
+    if needs_llm:
+        if not openai_key or not google_key:
+            print(f"\n{BOLD}{RED}CRITICAL ERROR: Missing API keys!{RESET}")
+            if not openai_key:
+                print(f"{RED}  - OPENAI_API_KEY is missing{RESET}")
+            if not google_key:
+                print(f"{RED}  - GOOGLE_API_KEY is missing{RESET}")
+            print(f"{RED}Sprint 2 requires BOTH keys for high availability/redundancy.{RESET}")
+            print(f"{RED}Terminating.{RESET}\n")
             sys.exit(1)
 
     extracted_dir = os.path.abspath("data/extracted")
@@ -87,7 +94,11 @@ def main():
             if not args.skip_summaries:
                 print("Generating skeleton summaries...")
                 summaries, sum_cost = ingestor.generate_skeleton_summaries_sync(doc.chunks)
-                doc.section_summaries = summaries
+                # Stringify tuple keys for JSON serialization
+                doc.section_summaries = {
+                    " > ".join([h[1] for h in k]) if k else "Root": v 
+                    for k, v in summaries.items()
+                }
                 
                 print("Generating document summary...")
                 doc_summary, doc_cost = ingestor.generate_document_summary(summaries, original_filename)
@@ -126,7 +137,7 @@ def main():
             print(f"  - Table Chunks: {len(tables_data)}")
                 
         except Exception as e:
-            print(f"ERROR: Failed to parse {os.path.basename(json_path)} - {e}")
+            print(f"{RED}ERROR: Failed to parse {os.path.basename(json_path)} - {e}{RESET}")
 
 if __name__ == "__main__":
     main()

@@ -60,7 +60,11 @@ def main():
         if not args.skip_summaries:
             print("  → Generating skeleton summaries...")
             summaries, sum_cost = ingestor.generate_skeleton_summaries_sync(doc.chunks)
-            doc.section_summaries = summaries
+            # Stringify tuple keys for JSON serialization
+            doc.section_summaries = {
+                " > ".join([h[1] for h in k]) if k else "Root": v 
+                for k, v in summaries.items()
+            }
             
             print("  → Generating document summary...")
             doc_summary, doc_cost = ingestor.generate_document_summary(summaries, filename)
