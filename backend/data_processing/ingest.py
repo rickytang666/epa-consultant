@@ -275,7 +275,7 @@ class DocumentIngestor:
     def _process_text_pages(self, pages: List[str], doc_id: str) -> List[Chunk]:
         """Processes each page text, extracting sections, headers, and tables."""
         chunks = []
-        global_chunk_index = 0
+        global_chunk_index = 1
         global_table_index = 0
         global_header_context = {}
 
@@ -316,7 +316,6 @@ class DocumentIngestor:
                         table_idx = int(table_match.group(1))
                         if 0 <= table_idx < len(table_blocks):
                             # It's a table
-                            global_chunk_index += 1
                             global_table_index += 1
                             chunks.append(Chunk(
                                 document_id=doc_id,
@@ -331,9 +330,9 @@ class DocumentIngestor:
                                     table_title=""
                                 )
                             ))
+                            global_chunk_index += 1
                     else:
                         # It's text
-                        global_chunk_index += 1
                         chunks.append(Chunk(
                             document_id=doc_id,
                             chunk_id=f"chunk_{global_chunk_index:03d}",
@@ -343,12 +342,14 @@ class DocumentIngestor:
                             header_path=header_breadcrumbs,
                             metadata=ChunkMetadata(is_table=False)
                         ))
+                        global_chunk_index += 1
         
         return chunks
 
     def _extract_tables(self, text: str) -> Tuple[str, List[str]]:
         """
         Extracts markdown tables from text.
+        Improved detection: requires at least one separator line (|---|---| pattern)
         Returns: (text_with_placeholders, list_of_table_strings)
         """
         lines = text.split('\n')
@@ -359,26 +360,47 @@ class DocumentIngestor:
         
         for line in lines:
             stripped = line.strip()
-            # Simple heuristic: markdown table lines start with |
+            # Markdown table lines start with |
             if stripped.startswith('|'):
-                in_table = True
                 current_table.append(line)
+                # Check if this is a valid table (has separator line)
+                if not in_table and len(current_table) >= 2:
+                    # Look for separator line pattern: |---|---| or | --- | --- |
+                    for table_line in current_table:
+                        if re.match(r'^\|[\s:-]+\|', table_line.strip()):
+                            in_table = True
+                            break
             else:
                 if in_table:
-                    # End of table
-                    table_content = "\n".join(current_table)
-                    tables.append(table_content)
+                    # Validate table has separator before saving
+                    has_separator = any(
+                        re.match(r'^\|[\s:-]+\|', l.strip()) 
+                        for l in current_table
+                    )
+                    if has_separator:
+                        table_content = "\n".join(current_table)
+                        tables.append(table_content)
+                        new_lines.append(f"__TABLE_{len(tables)-1}__")
+                    else:
+                        # Not a valid table, add lines back as text
+                        new_lines.extend(current_table)
+                    
                     current_table = []
                     in_table = False
-                    # Insert placeholder
-                    new_lines.append(f"__TABLE_{len(tables)-1}__")
                 
                 new_lines.append(line)
         
         # Catch last table
         if in_table and current_table:
-            tables.append("\n".join(current_table))
-            new_lines.append(f"__TABLE_{len(tables)-1}__")
+            has_separator = any(
+                re.match(r'^\|[\s:-]+\|', l.strip()) 
+                for l in current_table
+            )
+            if has_separator:
+                tables.append("\n".join(current_table))
+                new_lines.append(f"__TABLE_{len(tables)-1}__")
+            else:
+                new_lines.extend(current_table)
             
         return "\n".join(new_lines), tables
 
@@ -638,7 +660,10 @@ class DocumentIngestor:
             size_ok = combined_len < self.chunk_size
             
             if headers_match and size_ok:
-                current_chunk.content += "\n" + next_chunk.content
+                # Merge content (mutating is OK here since we're building new chunks)
+                current_chunk = current_chunk.model_copy(
+                    update={"content": current_chunk.content + "\n" + next_chunk.content}
+                )
                 # Update location range if needed (simplified here)
             else:
                 merged.append(current_chunk)
@@ -650,7 +675,11 @@ class DocumentIngestor:
         return merged
 
     def _split_chunks(self, chunks: List[Chunk]) -> List[Chunk]:
-        """Splits chunks that are too large."""
+        """
+        Splits chunks that are too large using RecursiveCharacterTextSplitter.
+        Preserves chunk_index from previous steps (no renumbering).
+        Split chunks get sub-indices in chunk_id (e.g., chunk_001-0, chunk_001-1).
+        """
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
@@ -658,35 +687,30 @@ class DocumentIngestor:
         )
         
         final_chunks = []
-        chunk_counter = 0  # Global counter for chunk_index
         
         for chunk in chunks:
-            # SKIP splitting for tables
+            # SKIP splitting for tables - keep as-is
             if chunk.metadata.is_table:
-                chunk_counter += 1
-                # Update chunk_index to sequential counter
-                chunk.chunk_index = chunk_counter
                 final_chunks.append(chunk)
                 continue
                 
+            # Split large chunks
             if len(chunk.content) > self.chunk_size:
                 split_texts = text_splitter.split_text(chunk.content)
                 for i, text in enumerate(split_texts):
-                    chunk_counter += 1
+                    # Use same chunk_index, different chunk_id for splits
                     new_chunk = Chunk(
                         document_id=chunk.document_id,
                         chunk_id=f"{chunk.chunk_id}-{i}",
                         content=text,
-                        chunk_index=chunk_counter,
+                        chunk_index=chunk.chunk_index,  # Keep original index
                         location=chunk.location,
                         header_path=chunk.header_path,
                         metadata=chunk.metadata
                     )
                     final_chunks.append(new_chunk)
             else:
-                chunk_counter += 1
-                # Update chunk_index to sequential counter
-                chunk.chunk_index = chunk_counter
+                # Keep chunk as-is
                 final_chunks.append(chunk)
         
         return final_chunks
