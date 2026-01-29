@@ -106,6 +106,49 @@ uv run python scripts/run/run_parsing.py --skip-summaries
 | `data/extracted/` | JSON output from pdf_extractor (markdown + metadata) |
 | `data/processed/` | Final processed JSON (chunks, summaries, header_tree) |
 
+## Output Schema
+
+```json
+{
+  "document_id": "uuid-string",
+  "filename": "document.pdf",
+  "document_summary": "2-8 sentence overview...",
+  "section_summaries": {
+    "Section Name": "Summary of section...",
+    "Section > Subsection": "Summary of subsection..."
+  },
+  "header_tree": {
+    "Top Level Header": {
+      "Nested Header": {},
+      "Another Nested": {}
+    }
+  },
+  "costs": {
+    "header_correction": 0.0,
+    "skeleton_summaries": 0.25,
+    "document_summary": 0.01,
+    "total": 0.26
+  },
+  "chunks": [
+    {
+      "document_id": "uuid-string",
+      "content": "Chunk text content...",
+      "chunk_index": "1-0",
+      "location": { "page_number": 1 },
+      "header_path": [
+        { "level": "Header 1", "name": "Section Name" },
+        { "level": "Header 2", "name": "Subsection Name" }
+      ],
+      "is_table": false,
+      "metadata": {
+        "Header 1": "Section Name",
+        "Header 2": "Subsection Name"
+      }
+    }
+  ]
+}
+```
+
 ## Costs
 
 Example costs for a 174-page document (`2026-pgp.pdf`):

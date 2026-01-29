@@ -35,6 +35,8 @@ class ProcessedChunk:
     # Breadcrumbs
     header_path: List[SectionHeader] = field(default_factory=list)
     
+    is_table: bool = False
+    
     metadata: Dict[str, Any] = field(default_factory=dict)
     
     created_at: datetime = field(default_factory=datetime.utcnow)
@@ -46,6 +48,7 @@ class ProcessedChunk:
             "chunk_index": self.chunk_index,
             "location": self.location.to_dict(),
             "header_path": [h.to_dict() for h in self.header_path],
+            "is_table": self.is_table,
             "metadata": self.metadata
         }
 

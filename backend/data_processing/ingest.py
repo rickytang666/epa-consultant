@@ -319,6 +319,7 @@ class DocumentIngestor:
                                 chunk_index=global_chunk_index,
                                 location=ChunkLocation(page_number=curr_page),
                                 header_path=header_breadcrumbs,
+                                is_table=True,
                                 metadata=table_meta
                             ))
                     else:
