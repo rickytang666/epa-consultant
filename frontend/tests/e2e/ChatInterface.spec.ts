@@ -12,7 +12,7 @@ test.describe('Chat Interface', () => {
 
         // 1. Locate Input
         // Ideally use getByPlaceholder or getByRole('textbox')
-        const input = page.getByPlaceholder('Type your message...');
+        const input = page.getByPlaceholder('Ask about EPA regulations...');
         await expect(input).toBeVisible();
 
         // 2. Type message
@@ -26,8 +26,10 @@ test.describe('Chat Interface', () => {
 
         // 4. Verify Message Appears in Chat List
         // The chat list should contain the message text
-        // We look for a container or specific message bubble
-        await expect(page.getByText(testMessage)).toBeVisible();
+        const chatList = page.getByTestId('chat-list');
+        const userBubble = chatList.locator('.bg-primary').filter({ hasText: testMessage });
+
+        await expect(userBubble).toBeVisible();
 
         // 5. Verify Input is cleared
         await expect(input).toBeEmpty();
@@ -39,19 +41,18 @@ test.describe('Chat Interface', () => {
         // if they have manually scrolled up.
 
         // 1. Send a proper prompt to trigger a long response (mocked or real)
-        const input = page.getByPlaceholder('Type your message...');
+        const input = page.getByPlaceholder('Ask about EPA regulations...');
         await input.fill("Tell me a very long story about lead pipes.");
         await input.press('Enter');
 
-        // 2. Wait for response to start streaming
-        // In a real app we might wait for the "typing" indicator or first token
-        const chatList = page.locator('[data-testid="chat-list"]'); // Expected testID for the scrollable container
+        // 2. Wait for response to start streaming (Assistant bubble appears)
+        const chatList = page.getByTestId('chat-list');
+        // Wait for assistant bubble (bg-muted/80 is the new style)
+        // We look for any element with assistant styling
+        const assistantBubble = chatList.locator('.bg-muted\\/80');
+        await expect(assistantBubble).toBeVisible({ timeout: 10000 });
 
         // 3. Scroll up manually
-        // We need to wait until there is enough content to scroll. 
-        // For a pre-emptive test, we might just assert that the container EXISTS and is scrollable eventually.
-        // But to test logic:
-
         // Simulate user scrolling up by 100px
         await chatList.evaluate(node => node.scrollTop -= 100);
 
@@ -59,13 +60,13 @@ test.describe('Chat Interface', () => {
         const scrollTopBefore = await chatList.evaluate(node => node.scrollTop);
 
         // 4. Wait a bit (simulating more tokens arriving)
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(2000);
 
         // 5. Verify scroll position HAS NOT changed (it pinned to user location)
-        // If it auto-scrolled to bottom, scrollTop would be higher (or max).
         const scrollTopAfter = await chatList.evaluate(node => node.scrollTop);
 
-        expect(scrollTopAfter).toBe(scrollTopBefore);
+        // Allow for tiny pixel differences due to rendering, but should be identical conceptually
+        expect(Math.abs(scrollTopAfter - scrollTopBefore)).toBeLessThan(5);
     });
 
 

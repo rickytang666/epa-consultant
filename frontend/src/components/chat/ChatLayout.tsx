@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { ChatList } from '@/components/chat/ChatList';
+import { ChatInput } from '@/components/chat/ChatInput';
+import { useChat } from '@/hooks/useChat';
 import { BookOpen } from 'lucide-react';
 
 interface ChatLayoutProps {
@@ -8,12 +10,7 @@ interface ChatLayoutProps {
 }
 
 export function ChatLayout({ onToggleContext, isContextOpen }: ChatLayoutProps) {
-    // Mock data for visual verification
-    const messages = [
-        { role: "assistant" as const, content: "Hello! I am your EPA Consultant. How can I help you today?" },
-        { role: "user" as const, content: "Tell me about lead pipes." },
-        { role: "assistant" as const, content: "The Lead and Copper Rule Improvements (LCRI) require water systems to identify and replace lead pipes..." }
-    ];
+    const { messages, sendMessage, isLoading } = useChat();
 
     return (
         <div className="flex h-full flex-col">
@@ -33,12 +30,7 @@ export function ChatLayout({ onToggleContext, isContextOpen }: ChatLayoutProps) 
             </header>
             <div className="flex-1 bg-background flex flex-col overflow-hidden">
                 <ChatList messages={messages} />
-                {/* Input placeholder */}
-                <div className="p-4 border-t">
-                    <div className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-                        Type your message...
-                    </div>
-                </div>
+                <ChatInput onSend={sendMessage} isLoading={isLoading} />
             </div>
         </div>
     );
