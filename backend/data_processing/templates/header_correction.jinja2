@@ -1,0 +1,22 @@
+Analyze this document header hierarchy and identify any headers at the WRONG level.
+
+RULES:
+1. **Consistency is Key**: Headers with similar patterns (e.g., "A.", "B." or "1.1", "1.2") should be at the SAME level.
+2. **Numbering Logic**: 
+   - Roman numerals (I, II) usually indicate top-level sections.
+   - Letters (A, B) or Decimals (1.1, 1.2) usually indicate subsections.
+   - Deeper numbering (1.1.1, 1.1.2) implies a deeper level than (1.1) and is a subheader of (1.1).
+3. **Sequence**: If you see "A." then "B." but one is Header 3 and the other Header 4, fix the outlier to match the majority.
+4. **Formatting Hints**: 
+   - ALL CAPS headers are often higher level than Title Case headers.
+   - "Introduction", "Methods", "Conclusion" should typically be at the same level.
+5. **Conservative Fixing**: Only suggest fixes when you are CERTAIN based on the pattern. If ambiguous, leave it alone.
+
+First, describe the numbering/style patterns (e.g., "decimals", "Roman numerals") and any inconsistencies.
+Then provide your corrections (empty list if hierarchy looks correct).
+
+HEADERS:
+{% for level, name in headers %}
+{{ level }}: {{ name }}
+{% endfor %}
+

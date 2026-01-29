@@ -1,0 +1,10 @@
+Summarize this document in 2-8 sentences. Be concise.
+
+Document: {{ filename }}
+
+Section summaries:
+{% for section in sections %}
+- {{ section.name }}: {{ section.summary }}
+{% endfor %}
+
+Write a coherent summary paragraph:
