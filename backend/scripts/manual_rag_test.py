@@ -20,9 +20,12 @@ def main():
     # stream response
     try:
         chunks = []
-        for chunk in query_rag(query):
-            print(chunk, end="", flush=True)
-            chunks.append(chunk)
+        for event in query_rag(query):
+            if event["type"] == "content":
+                print(event["delta"], end="", flush=True)
+                chunks.append(event["delta"])
+            elif event["type"] == "sources":
+                print(f"\n[Sources: {len(event['data'])} found]\n")
         
         if not chunks:
             print("\n[warning] no answer generated. is the database seeded?")

@@ -18,8 +18,11 @@ class TestRAGQuality:
     
     def get_answer(self, query):
         """helper to get full string answer"""
+        chunks = list(query_rag(query))
+        # filter for content type and join deltas
+        text = "".join([c["delta"] for c in chunks if c["type"] == "content"])
         # normalize unicode hyphens from pdf
-        return "".join(list(query_rag(query))).replace("‑", "-")
+        return text.replace("‑", "-")
 
     def test_q1_pgp_definition(self):
         """Question 1: What is the PGP?"""

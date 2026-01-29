@@ -28,9 +28,17 @@ def test_query_rag_mocked():
         
         # execute
         generator = query_rag("What does EPA regulate?")
-        response = "".join(list(generator))
         
-        # verify
-        assert "The EPA regulates." in response
+        # consume generator
+        chunks = list(generator)
+        
+        # verify structure
+        # first chunk should be sources
+        assert chunks[0]["type"] == "sources"
+        assert len(chunks[0]["data"]) == 2
+        
+        # subsequent chunks are content
+        content_text = "".join([c["delta"] for c in chunks if c["type"] == "content"])
+        assert "The EPA regulates." in content_text
         mock_retrieval.assert_called_once()
         mock_openai.chat.completions.create.assert_called_once()
