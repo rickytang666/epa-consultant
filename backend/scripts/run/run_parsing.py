@@ -86,7 +86,7 @@ def main():
             out_path = os.path.join(processed_dir, out_name)
             
             with open(out_path, "w") as f:
-                json.dump(doc.to_dict(), f, indent=2, default=str)
+                json.dump(doc.model_dump(), f, indent=2, default=str)
                 
             print(f"SUCCESS: Processed to {out_path}")
             print(f"  - Document ID: {doc.document_id}")

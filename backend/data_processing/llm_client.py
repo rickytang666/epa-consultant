@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # Pricing per 1M tokens
 PRICING = {
-    "gemini-2.0-flash-lite": {"input": 0.0, "output": 0.0},  # Free tier
+    "gemini-2.5-flash-lite": {"input": 0.0, "output": 0.0},  # Free tier
     "gpt-5-mini": {"input": 0.25, "output": 2.0},
     "gpt-5.2": {"input": 0.25, "output": 2.0},
     "default": {"input": 0.25, "output": 2.0}
@@ -38,12 +38,13 @@ class LLMClient:
         """Lazy initialize Gemini."""
         if self._gemini_model is None and self.google_api_key:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=self.google_api_key)
-                self._gemini_model = genai
+                from google import genai
+                from google.genai import types
+                client = genai.Client(api_key=self.google_api_key)
+                self._gemini_model = client
                 logger.info("Gemini fallback initialized")
             except ImportError:
-                logger.warning("google-generativeai not installed, Gemini unavailable")
+                logger.warning("google-genai not installed, Gemini unavailable")
             except Exception as e:
                 logger.warning(f"Failed to initialize Gemini: {e}")
         return self._gemini_model
@@ -136,12 +137,12 @@ class LLMClient:
         **kwargs
     ):
         """Fallback to Gemini."""
-        genai = self._init_gemini()
-        if not genai:
+        client = self._init_gemini()
+        if not client:
             raise Exception("Gemini fallback unavailable and OpenAI failed")
         
-        # Map to Gemini model
-        gemini_model_name = "gemini-2.0-flash-exp"  # Free tier
+        # Use correct Gemini model name
+        gemini_model_name = "gemini-2.5-flash-lite"
         
         # Build prompt
         prompt_parts = []
@@ -155,11 +156,16 @@ class LLMClient:
         
         # Add JSON schema hint if structured output needed
         if response_format:
-            prompt += "\n\nRespond in valid JSON format only, no markdown formatting."
+            # Get schema from Pydantic model
+            schema = response_format.model_json_schema()
+            schema_str = json.dumps(schema, indent=2)
+            prompt += f"\n\nRespond in valid JSON format matching this exact schema:\n{schema_str}\n\nIMPORTANT: Use these exact field names. Do not add markdown formatting."
         
-        # Call Gemini
-        model_instance = genai.GenerativeModel(gemini_model_name)
-        response = model_instance.generate_content(prompt)
+        # Call Gemini with new API
+        response = client.models.generate_content(
+            model=gemini_model_name,
+            contents=prompt
+        )
         content = response.text
         
         # Estimate tokens (Gemini doesn't provide exact counts)
@@ -177,16 +183,25 @@ class LLMClient:
         if response_format:
             try:
                 # Clean markdown code blocks if present
-                if content.startswith("```"):
-                    content = content.split("```")[1]
-                    if content.startswith("json"):
-                        content = content[4:]
-                    content = content.strip()
+                cleaned_content = content
+                if cleaned_content.startswith("```"):
+                    cleaned_content = cleaned_content.split("```")[1]
+                    if cleaned_content.startswith("json"):
+                        cleaned_content = cleaned_content[4:]
+                    cleaned_content = cleaned_content.strip()
                 
-                data = json.loads(content)
+                # Remove any trailing markdown blocks
+                if "```" in cleaned_content:
+                    cleaned_content = cleaned_content.split("```")[0].strip()
+                
+                data = json.loads(cleaned_content)
                 parsed = response_format.model_validate(data)
-            except Exception as e:
+            except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse Gemini JSON response: {e}")
+                logger.debug(f"Raw content: {content[:500]}...")
+                raise
+            except Exception as e:
+                logger.error(f"Failed to validate Gemini response: {e}")
                 raise
         
         # Return OpenAI-compatible format
