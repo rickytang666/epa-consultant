@@ -38,9 +38,21 @@ def query_rag(query: str) -> Generator[dict[str, Any], None, None]:
         return
 
     # 1. retrieve context
-    chunks = retrieve_relevant_chunks(query, n_results=5)
-    context_text = "\n\n".join([c["text"] for c in chunks])
+    # optimize: reduce k to 3 for speed/cost, usually sufficient for RAG
+    chunks = retrieve_relevant_chunks(query, n_results=3)
     
+    # optimize: truncate duplicate or massive chunks to avoid token limit errors
+    # average chunk is ~800 chars, but outliers can be 30k+
+    MAX_CHUNK_CHARS = 4000 
+    
+    truncated_chunks = []
+    for c in chunks:
+        # shallow copy to avoid mutating original for sources
+        c_copy = c.copy()
+        if len(c_copy["text"]) > MAX_CHUNK_CHARS:
+            c_copy["text"] = c_copy["text"][:MAX_CHUNK_CHARS] + "... [truncated]"
+        truncated_chunks.append(c_copy)
+
     # 2. Yield Sources Event immediately
     yield {
         "type": "sources",
@@ -68,7 +80,7 @@ def query_rag(query: str) -> Generator[dict[str, Any], None, None]:
 
     # build context with section summaries
     context_parts = []
-    for c in chunks:
+    for c in truncated_chunks:
         meta = c.get("metadata", {})
         part = ""
         # add header path for context
