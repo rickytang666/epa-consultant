@@ -19,6 +19,22 @@ def main():
     parser.add_argument("--fix-headers", action="store_true", help="Enable header correction LLM step.")
     parser.add_argument("--skip-summaries", action="store_true", help="Skip summary generation.")
     args = parser.parse_args()
+    
+    # 0. API Key Check
+    openai_key = os.getenv("OPENAI_API_KEY")
+    google_key = os.getenv("GOOGLE_API_KEY")
+    
+    # Red color codes for terminal
+    RED = "\033[91m"
+    BOLD = "\033[1m"
+    RESET = "\033[0m"
+    
+    if not args.skip_summaries or args.fix_headers:
+        if not openai_key and not google_key:
+            print(f"\n{BOLD}{RED}CRITICAL ERROR: No API keys found!{RESET}")
+            print(f"{RED}Please set OPENAI_API_KEY or GOOGLE_API_KEY in your .env file or environment.{RESET}")
+            print(f"{RED}Summaries or header correction require an LLM.{RESET}\n")
+            sys.exit(1)
 
     extracted_dir = os.path.abspath("data/extracted")
     processed_dir = os.path.abspath("data/processed")
