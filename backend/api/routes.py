@@ -5,8 +5,11 @@ from fastapi.responses import StreamingResponse
 from api.schemas import QueryRequest, QueryResponse, TableResponse
 from ml.rag_pipeline import query_rag
 
-router = APIRouter()
+router = APIRouter(prefix='/api')
 
+@router.get("/status")
+async def status():
+    return {"status": "ok"}
 
 @router.post("/query")
 async def query(request: QueryRequest):
@@ -16,7 +19,7 @@ async def query(request: QueryRequest):
     uses server-sent events for streaming
     """
     async def generate():
-        for chunk in query_rag(request.question):
+        async for chunk in query_rag(request.question):
             if chunk["type"] == "content":
                 yield f"content: {chunk['delta']}\n\n"
             elif chunk["type"] == "sources":
