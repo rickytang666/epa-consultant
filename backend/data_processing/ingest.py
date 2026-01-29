@@ -15,12 +15,15 @@ from dotenv import load_dotenv
 from openai import OpenAI, AsyncOpenAI
 
 from .models import (
-    IngestedDocument, 
-    ProcessedChunk, 
-    ChunkLocation, 
-    SectionHeader,
     HeaderAnalysis,
     SectionSummary
+)
+from shared.schemas import (
+    HeaderNode,
+    ChunkLocation,
+    Chunk,
+    ChunkMetadata,
+    ProcessedDocument
 )
 from .prompts import (
     get_header_correction_template,
@@ -69,7 +72,7 @@ class DocumentIngestor:
         markdown_text: str, 
         filename: str, 
         doc_id: Optional[str] = None
-    ) -> IngestedDocument:
+    ) -> ProcessedDocument:
         """
         Main synchronous entry point for document ingestion.
         """
@@ -99,15 +102,17 @@ class DocumentIngestor:
         logger.info(f"Split into {len(rag_chunks)} final RAG chunks.")
 
         logger.info("Ingestion complete.")
-        return IngestedDocument(
+        
+        # build header tree from chunks
+        header_tree = self._build_header_tree(rag_chunks)
+        
+        return ProcessedDocument(
             document_id=doc_id,
             filename=filename,
-            total_pages=len(split_content),
             chunks=rag_chunks,
-            section_chunks=section_chunks,
-            # Placeholders for future summary integration
             document_summary="",
             section_summaries={},
+            header_tree=header_tree,
             costs={
                 "header_correction": costs.get("header_correction", 0.0),
                 "skeleton_summaries": 0.0,
@@ -119,7 +124,7 @@ class DocumentIngestor:
 
     async def generate_skeleton_summaries(
         self,
-        chunks: List[ProcessedChunk],
+        chunks: List[Chunk],
         first_n_chars: int = 2500,
         last_n_chars: int = 1000
     ) -> Tuple[Dict[tuple, str], float]:
@@ -212,7 +217,7 @@ class DocumentIngestor:
 
     def generate_skeleton_summaries_sync(
         self,
-        chunks: List[ProcessedChunk],
+        chunks: List[Chunk],
         first_n_chars: int = 2500,
         last_n_chars: int = 1000
     ) -> Tuple[Dict[tuple, str], float]:
@@ -267,7 +272,7 @@ class DocumentIngestor:
         # The split usually results in [empty_preamble, page_1, page_2...]
         return re.split(page_split_pattern, markdown_text)[1:]
 
-    def _process_text_pages(self, pages: List[str], doc_id: str) -> List[ProcessedChunk]:
+    def _process_text_pages(self, pages: List[str], doc_id: str) -> List[Chunk]:
         """Processes each page text, extracting sections, headers, and tables."""
         chunks = []
         global_chunk_index = 0
@@ -294,7 +299,7 @@ class DocumentIngestor:
                 section_metadata = section['metadata']
                 header_breadcrumbs = []
                 for h_tag, h_name in section_metadata.items():
-                    header_breadcrumbs.append(SectionHeader(level=h_tag, name=h_name))
+                    header_breadcrumbs.append(HeaderNode(level=h_tag, name=h_name))
 
                 # 3. Create chunks in ORDER based on placeholders
                 # Split text by table placeholders to maintain flow
@@ -313,32 +318,30 @@ class DocumentIngestor:
                             # It's a table
                             global_chunk_index += 1
                             global_table_index += 1
-                            table_meta = {
-                                "is_table": True,
-                                "table_id": f"table_{global_table_index:03d}",
-                                "table_title": ""
-                            }
-                            chunks.append(ProcessedChunk(
+                            chunks.append(Chunk(
                                 document_id=doc_id,
                                 chunk_id=f"chunk_{global_chunk_index:03d}",
                                 content=table_blocks[table_idx],
                                 chunk_index=global_chunk_index,
                                 location=ChunkLocation(page_number=curr_page),
                                 header_path=header_breadcrumbs,
-                                metadata=table_meta
+                                metadata=ChunkMetadata(
+                                    is_table=True,
+                                    table_id=f"table_{global_table_index:03d}",
+                                    table_title=""
+                                )
                             ))
                     else:
                         # It's text
                         global_chunk_index += 1
-                        text_meta = {"is_table": False}
-                        chunks.append(ProcessedChunk(
+                        chunks.append(Chunk(
                             document_id=doc_id,
                             chunk_id=f"chunk_{global_chunk_index:03d}",
                             content=part.strip(),
                             chunk_index=global_chunk_index,
                             location=ChunkLocation(page_number=curr_page),
                             header_path=header_breadcrumbs,
-                            metadata=text_meta
+                            metadata=ChunkMetadata(is_table=False)
                         ))
         
         return chunks
@@ -422,7 +425,7 @@ class DocumentIngestor:
             
         return chunks
 
-    def _correct_headers(self, chunks: List[ProcessedChunk]) -> Tuple[List[ProcessedChunk], float]:
+    def _correct_headers(self, chunks: List[Chunk]) -> Tuple[List[Chunk], float]:
         """Uses LLM to detect and fix header hierarchy issues."""
         logger.info("Correcting headers with LLM...")
         unique_headers = self._extract_unique_headers(chunks)
@@ -466,7 +469,7 @@ class DocumentIngestor:
             logger.error(f"LLM header correction failed: {e}")
             return chunks, 0.0
 
-    def _extract_unique_headers(self, chunks: List[ProcessedChunk]) -> List[tuple]:
+    def _extract_unique_headers(self, chunks: List[Chunk]) -> List[tuple]:
         seen = set()
         unique = []
         for chunk in chunks:
@@ -477,7 +480,7 @@ class DocumentIngestor:
                     unique.append(key)
         return unique
 
-    def _apply_corrections(self, chunks: List[ProcessedChunk], corrections: List) -> List[ProcessedChunk]:
+    def _apply_corrections(self, chunks: List[Chunk], corrections: List) -> List[Chunk]:
         """
         Applies header level corrections with section-number-based re-parenting.
         
@@ -572,7 +575,7 @@ class DocumentIngestor:
                 while parent_num:
                     if parent_num in section_headers:
                         parent_level, parent_name = section_headers[parent_num]
-                        ancestors.insert(0, SectionHeader(level=parent_level, name=parent_name))
+                        ancestors.insert(0, HeaderNode(level=parent_level, name=parent_name))
                     parent_num = get_section_parent(parent_num) if parent_num and '.' in parent_num else None
             
             # Also include non-numbered headers from original path (like "Appendices" if it's a true parent)
@@ -597,15 +600,14 @@ class DocumentIngestor:
             
             # Combine: non-numbered ancestors + numbered ancestors + current header
             new_path = non_numbered_ancestors + ancestors + [
-                SectionHeader(level=corrected_level, name=name)
+                HeaderNode(level=corrected_level, name=name)
             ]
             
             chunk.header_path = new_path
-            chunk.metadata = {h.level: h.name for h in new_path}
         
         return chunks
 
-    def _merge_sections(self, chunks: List[ProcessedChunk]) -> List[ProcessedChunk]:
+    def _merge_sections(self, chunks: List[Chunk]) -> List[Chunk]:
         """
         Merges small chunks that belong to the same header section.
         """
@@ -617,7 +619,7 @@ class DocumentIngestor:
         
         for next_chunk in chunks[1:]:
             # If next chunk is a table, don't merge it into text!
-            if next_chunk.metadata.get("type") == "table":
+            if next_chunk.metadata.is_table:
                 if current_chunk: # Flush any accumulated text chunk
                     merged.append(current_chunk)
                 merged.append(next_chunk) 
@@ -647,7 +649,7 @@ class DocumentIngestor:
             
         return merged
 
-    def _split_chunks(self, chunks: List[ProcessedChunk]) -> List[ProcessedChunk]:
+    def _split_chunks(self, chunks: List[Chunk]) -> List[Chunk]:
         """Splits chunks that are too large."""
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
@@ -656,34 +658,57 @@ class DocumentIngestor:
         )
         
         final_chunks = []
+        chunk_counter = 0  # Global counter for chunk_index
+        
         for chunk in chunks:
             # SKIP splitting for tables
-            if chunk.metadata.get("is_table"):
+            if chunk.metadata.is_table:
+                chunk_counter += 1
+                # Update chunk_index to sequential counter
+                chunk.chunk_index = chunk_counter
                 final_chunks.append(chunk)
                 continue
                 
             if len(chunk.content) > self.chunk_size:
                 split_texts = text_splitter.split_text(chunk.content)
                 for i, text in enumerate(split_texts):
-                    new_chunk = ProcessedChunk(
+                    chunk_counter += 1
+                    new_chunk = Chunk(
                         document_id=chunk.document_id,
                         chunk_id=f"{chunk.chunk_id}-{i}",
                         content=text,
-                        chunk_index=f"{chunk.chunk_index}-{i}",
+                        chunk_index=chunk_counter,
                         location=chunk.location,
                         header_path=chunk.header_path,
                         metadata=chunk.metadata
                     )
                     final_chunks.append(new_chunk)
             else:
+                chunk_counter += 1
+                # Update chunk_index to sequential counter
+                chunk.chunk_index = chunk_counter
                 final_chunks.append(chunk)
         
         return final_chunks
 
-    def _get_header_key(self, chunk: ProcessedChunk) -> tuple:
+    def _get_header_key(self, chunk: Chunk) -> tuple:
         if not chunk.header_path:
             return ()
         return tuple((h.level, h.name) for h in sorted(chunk.header_path, key=lambda h: int(h.level.split()[1])))
+    
+    def _build_header_tree(self, chunks: List[Chunk]) -> Dict:
+        """Build nested dict of headers from chunks."""
+        tree = {}
+        for chunk in chunks:
+            if not chunk.header_path:
+                continue
+            current = tree
+            for header in chunk.header_path:
+                name = header.name
+                if name not in current:
+                    current[name] = {}
+                current = current[name]
+        return tree
 
 
 
