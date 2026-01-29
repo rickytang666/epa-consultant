@@ -77,20 +77,40 @@ def main():
 
     # Step 3: Save output
     os.makedirs(args.output_dir, exist_ok=True)
-    output_filename = filename.replace(".pdf", ".json")
-    output_path = os.path.join(args.output_dir, output_filename)
+    
+    # Save chunks.json
+    chunks_path = os.path.join(args.output_dir, "chunks.json")
+    chunks_data = [chunk.model_dump() for chunk in doc.chunks]
+    
+    # Save tables.json (extract table chunks)
+    tables_path = os.path.join(args.output_dir, "tables.json")
+    tables_data = [
+        chunk.model_dump() 
+        for chunk in doc.chunks 
+        if chunk.metadata.is_table
+    ]
     
     try:
-        with open(output_path, "w") as f:
-            json.dump(doc.model_dump(), f, indent=2, default=str)
+        # Write chunks
+        with open(chunks_path, "w") as f:
+            json.dump(chunks_data, f, indent=2, default=str)
+        
+        # Write tables
+        with open(tables_path, "w") as f:
+            json.dump(tables_data, f, indent=2, default=str)
+        
         print(f"{'='*60}")
-        print(f"✓ SUCCESS: Saved to {output_path}")
+        print(f"✓ SUCCESS:")
+        print(f"  Chunks: {chunks_path}")
+        print(f"  Tables: {tables_path}")
         print(f"{'='*60}\n")
         
         # Summary
         print("Summary:")
         print(f"  Document ID: {doc.document_id}")
-        print(f"  Chunks: {len(doc.chunks)}")
+        print(f"  Total Chunks: {len(doc.chunks)}")
+        print(f"  Table Chunks: {len(tables_data)}")
+        print(f"  Text Chunks: {len(doc.chunks) - len(tables_data)}")
         print(f"  Header Correction: {'Enabled' if args.fix_headers else 'Disabled'}")
         print(f"  Summaries: {'Generated' if not args.skip_summaries else 'Skipped'}")
         if doc.costs.get("total", 0) > 0:

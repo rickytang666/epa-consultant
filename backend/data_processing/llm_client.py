@@ -194,12 +194,34 @@ class LLMClient:
                 if "```" in cleaned_content:
                     cleaned_content = cleaned_content.split("```")[0].strip()
                 
+                # Fix common escape character issues in Gemini responses
+                # Replace invalid escape sequences with valid ones
+                import re
+                # Fix unescaped backslashes before certain characters
+                cleaned_content = re.sub(r'\\([^"\\/bfnrtu])', r'\\\\\1', cleaned_content)
+                
                 data = json.loads(cleaned_content)
                 parsed = response_format.model_validate(data)
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse Gemini JSON response: {e}")
-                logger.debug(f"Raw content: {content[:500]}...")
-                raise
+                logger.debug(f"Problematic content around error: {content[max(0, e.pos-100):e.pos+100]}")
+                # Try one more time with aggressive cleaning
+                try:
+                    # Replace all backslashes with double backslashes, then fix valid escape sequences
+                    aggressive_clean = cleaned_content.replace('\\', '\\\\')
+                    aggressive_clean = aggressive_clean.replace('\\\\n', '\\n')
+                    aggressive_clean = aggressive_clean.replace('\\\\t', '\\t')
+                    aggressive_clean = aggressive_clean.replace('\\\\r', '\\r')
+                    aggressive_clean = aggressive_clean.replace('\\\\"', '\\"')
+                    aggressive_clean = aggressive_clean.replace('\\\\/', '\\/')
+                    aggressive_clean = aggressive_clean.replace('\\\\\\\\', '\\\\')
+                    
+                    data = json.loads(aggressive_clean)
+                    parsed = response_format.model_validate(data)
+                    logger.info("Successfully parsed after aggressive cleaning")
+                except Exception as retry_error:
+                    logger.error(f"Aggressive cleaning also failed: {retry_error}")
+                    raise e  # Raise original error
             except Exception as e:
                 logger.error(f"Failed to validate Gemini response: {e}")
                 raise

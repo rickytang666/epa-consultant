@@ -81,16 +81,32 @@ def main():
                 doc.costs["document_summary"] = doc_cost
                 doc.costs["total"] = doc.costs.get("header_correction", 0.0) + sum_cost + doc_cost
             
-            # Save final output
-            out_name = os.path.basename(json_path) # Keep .json extension
-            out_path = os.path.join(processed_dir, out_name)
+            # Save output as separate files
             
-            with open(out_path, "w") as f:
-                json.dump(doc.model_dump(), f, indent=2, default=str)
+            # Save chunks.json
+            chunks_path = os.path.join(processed_dir, "chunks.json")
+            chunks_data = [chunk.model_dump() for chunk in doc.chunks]
+            
+            # Save tables.json
+            tables_path = os.path.join(processed_dir, "tables.json")
+            tables_data = [
+                chunk.model_dump() 
+                for chunk in doc.chunks 
+                if chunk.metadata.is_table
+            ]
+            
+            with open(chunks_path, "w") as f:
+                json.dump(chunks_data, f, indent=2, default=str)
+            
+            with open(tables_path, "w") as f:
+                json.dump(tables_data, f, indent=2, default=str)
                 
-            print(f"SUCCESS: Processed to {out_path}")
+            print(f"SUCCESS: Processed {os.path.basename(json_path)}")
+            print(f"  - Chunks: {chunks_path}")
+            print(f"  - Tables: {tables_path}")
             print(f"  - Document ID: {doc.document_id}")
-            print(f"  - Chunks: {len(doc.chunks)}")
+            print(f"  - Total Chunks: {len(doc.chunks)}")
+            print(f"  - Table Chunks: {len(tables_data)}")
                 
         except Exception as e:
             print(f"ERROR: Failed to parse {os.path.basename(json_path)} - {e}")
