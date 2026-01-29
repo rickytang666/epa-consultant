@@ -26,13 +26,25 @@ class LLMClient:
     """
     
     def __init__(self):
-        # OpenAI (primary)
-        self.openai_client = OpenAI()
-        self.openai_async_client = AsyncOpenAI()
-        
-        # Gemini (fallback) - lazy load
+        # Clients (lazily initialized)
+        self._openai_client = None
+        self._openai_async_client = None
         self._gemini_model = None
+        
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.google_api_key = os.getenv("GOOGLE_API_KEY")
+    
+    def _init_openai(self):
+        """Lazy initialize OpenAI."""
+        if self._openai_client is None and self.openai_api_key:
+            self._openai_client = OpenAI(api_key=self.openai_api_key)
+        return self._openai_client
+
+    def _init_openai_async(self):
+        """Lazy initialize OpenAI async."""
+        if self._openai_async_client is None and self.openai_api_key:
+            self._openai_async_client = AsyncOpenAI(api_key=self.openai_api_key)
+        return self._openai_async_client
     
     def _init_gemini(self):
         """Lazy initialize Gemini."""
@@ -60,16 +72,20 @@ class LLMClient:
         Chat completion with OpenAI primary, Gemini fallback.
         """
         # Try OpenAI first
+        client = self._init_openai()
         try:
+            if not client:
+                raise Exception("OpenAI API key missing")
+
             if response_format:
-                response = self.openai_client.beta.chat.completions.parse(
+                response = client.beta.chat.completions.parse(
                     model=model,
                     messages=messages,
                     response_format=response_format,
                     **kwargs
                 )
             else:
-                response = self.openai_client.chat.completions.create(
+                response = client.chat.completions.create(
                     model=model,
                     messages=messages,
                     **kwargs
@@ -101,16 +117,20 @@ class LLMClient:
         """
         Async chat completion with OpenAI primary, Gemini fallback.
         """
+        client = self._init_openai_async()
         try:
+            if not client:
+                raise Exception("OpenAI API key missing")
+
             if response_format:
-                response = await self.openai_async_client.beta.chat.completions.parse(
+                response = await client.beta.chat.completions.parse(
                     model=model,
                     messages=messages,
                     response_format=response_format,
                     **kwargs
                 )
             else:
-                response = await self.openai_async_client.chat.completions.create(
+                response = await client.chat.completions.create(
                     model=model,
                     messages=messages,
                     **kwargs
