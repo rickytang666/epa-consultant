@@ -23,12 +23,13 @@ google_client = None
 if GOOGLE_API_KEY:
     google_client = genai.Client(api_key=GOOGLE_API_KEY)
 
-def query_rag(query: str) -> Generator[dict[str, Any], None, None]:
+def query_rag(query: str, top_k: int = 3) -> Generator[dict[str, Any], None, None]:
     """
     answer a query using rag
     
     args:
         query: user question
+        top_k: number of chunks to retrieve (default 3)
         
     yields:
         chunks of the answer (streaming)
@@ -39,7 +40,7 @@ def query_rag(query: str) -> Generator[dict[str, Any], None, None]:
 
     # 1. retrieve context
     # optimize: reduce k to 3 for speed/cost, usually sufficient for RAG
-    chunks = retrieve_relevant_chunks(query, n_results=3)
+    chunks = retrieve_relevant_chunks(query, n_results=top_k)
     
     # optimize: truncate duplicate or massive chunks to avoid token limit errors
     # average chunk is ~800 chars, but outliers can be 30k+
