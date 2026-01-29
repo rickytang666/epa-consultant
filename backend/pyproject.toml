@@ -1,5 +1,5 @@
 [project]
-name = "epa-consultant"
+name = "epa-consultant-backend"
 version = "0.1.0"
 description = "fastapi backend for querying epa regulatory pdfs using rag"
 requires-python = ">=3.10"

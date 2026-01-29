@@ -17,8 +17,11 @@ async def query(request: QueryRequest):
     """
     async def generate():
         for chunk in query_rag(request.question):
-            yield f"data: {chunk}\n\n"
-        yield "data: [DONE]\n\n"
+            if chunk["type"] == "content":
+                yield f"content: {chunk['delta']}\n\n"
+            elif chunk["type"] == "sources":
+                yield f"sources: {chunk['data']}\n\n"
+        yield "state: [DONE]\n\n"
     
     return StreamingResponse(generate(), media_type="text/event-stream")
 
