@@ -28,6 +28,7 @@ class ProcessedChunk:
     The Atomic Unit of your RAG.
     """
     document_id: str
+    chunk_id: str
     content: str 
     chunk_index: Any # Can be int or str (e.g. "1-0")
     location: ChunkLocation
@@ -35,20 +36,18 @@ class ProcessedChunk:
     # Breadcrumbs
     header_path: List[SectionHeader] = field(default_factory=list)
     
-    is_table: bool = False
-    
     metadata: Dict[str, Any] = field(default_factory=dict)
     
     created_at: datetime = field(default_factory=datetime.utcnow)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
+            "chunk_id": self.chunk_id,
             "document_id": self.document_id,
             "content": self.content,
             "chunk_index": self.chunk_index,
             "location": self.location.to_dict(),
             "header_path": [h.to_dict() for h in self.header_path],
-            "is_table": self.is_table,
             "metadata": self.metadata
         }
 

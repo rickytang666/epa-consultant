@@ -131,18 +131,32 @@ uv run python scripts/run/run_parsing.py --skip-summaries
   },
   "chunks": [
     {
+      "chunk_id": "chunk_001",
       "document_id": "uuid-string",
       "content": "Chunk text content...",
-      "chunk_index": "1-0",
+      "chunk_index": 1,
       "location": { "page_number": 1 },
       "header_path": [
         { "level": "Header 1", "name": "Section Name" },
         { "level": "Header 2", "name": "Subsection Name" }
       ],
-      "is_table": false,
       "metadata": {
-        "Header 1": "Section Name",
-        "Header 2": "Subsection Name"
+        "is_table": false
+      }
+    },
+    {
+      "chunk_id": "chunk_042",
+      "document_id": "uuid-string",
+      "content": "| Type | Amount |...",
+      "chunk_index": 42,
+      "location": { "page_number": 15 },
+      "header_path": [
+        { "level": "Header 1", "name": "Fees" }
+      ],
+      "metadata": {
+        "is_table": true,
+        "table_id": "table_003",
+        "table_title": ""
       }
     }
   ]

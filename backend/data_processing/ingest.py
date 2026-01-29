@@ -271,6 +271,7 @@ class DocumentIngestor:
         """Processes each page text, extracting sections, headers, and tables."""
         chunks = []
         global_chunk_index = 0
+        global_table_index = 0
         global_header_context = {}
 
         for i, page_text in enumerate(pages):
@@ -311,27 +312,33 @@ class DocumentIngestor:
                         if 0 <= table_idx < len(table_blocks):
                             # It's a table
                             global_chunk_index += 1
-                            table_meta = section_metadata.copy()
-                            table_meta["type"] = "table"
+                            global_table_index += 1
+                            table_meta = {
+                                "is_table": True,
+                                "table_id": f"table_{global_table_index:03d}",
+                                "table_title": ""
+                            }
                             chunks.append(ProcessedChunk(
                                 document_id=doc_id,
+                                chunk_id=f"chunk_{global_chunk_index:03d}",
                                 content=table_blocks[table_idx],
                                 chunk_index=global_chunk_index,
                                 location=ChunkLocation(page_number=curr_page),
                                 header_path=header_breadcrumbs,
-                                is_table=True,
                                 metadata=table_meta
                             ))
                     else:
                         # It's text
                         global_chunk_index += 1
+                        text_meta = {"is_table": False}
                         chunks.append(ProcessedChunk(
                             document_id=doc_id,
+                            chunk_id=f"chunk_{global_chunk_index:03d}",
                             content=part.strip(),
                             chunk_index=global_chunk_index,
                             location=ChunkLocation(page_number=curr_page),
                             header_path=header_breadcrumbs,
-                            metadata=section_metadata
+                            metadata=text_meta
                         ))
         
         return chunks
@@ -651,7 +658,7 @@ class DocumentIngestor:
         final_chunks = []
         for chunk in chunks:
             # SKIP splitting for tables
-            if chunk.metadata.get("type") == "table":
+            if chunk.metadata.get("is_table"):
                 final_chunks.append(chunk)
                 continue
                 
@@ -660,6 +667,7 @@ class DocumentIngestor:
                 for i, text in enumerate(split_texts):
                     new_chunk = ProcessedChunk(
                         document_id=chunk.document_id,
+                        chunk_id=f"{chunk.chunk_id}-{i}",
                         content=text,
                         chunk_index=f"{chunk.chunk_index}-{i}",
                         location=chunk.location,
