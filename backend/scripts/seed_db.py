@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def load_chunks(file_path: str) -> List[Dict[str, Any]]:
+def load_chunks(file_path: str) -> tuple[List[Dict[str, Any]], str, Dict[str, str]]:
     """load chunks from json file"""
     with open(file_path, 'r') as f:
         data = json.load(f)
@@ -23,12 +23,16 @@ def load_chunks(file_path: str) -> List[Dict[str, Any]]:
     # handle new ProcessedDocument schema (dict with 'chunks' key)
     if isinstance(data, dict) and "chunks" in data:
         logger.info("detected ProcessedDocument schema in chunks.json")
-        return data["chunks"]
+        return (
+            data["chunks"], 
+            data.get("document_summary", ""), 
+            data.get("section_summaries", {})
+        )
         
     # handle legacy/tables schema (list of chunks)
-    return data
+    return (data, "", {})
 
-def prepare_chunk_for_store(item: Dict[str, Any]) -> Dict[str, Any]:
+def prepare_chunk_for_store(item: Dict[str, Any], doc_summary: str = "", section_summaries: Dict[str, str] = None) -> Dict[str, Any]:
     """transform raw chunk into format for vector store"""
     
     # 1. basic mapping
@@ -52,6 +56,20 @@ def prepare_chunk_for_store(item: Dict[str, Any]) -> Dict[str, Any]:
     if "chunk_index" in item:
         clean_metadata["chunk_index"] = int(item["chunk_index"])
         
+    # add summaries (if available)
+    if doc_summary:
+        clean_metadata["document_summary"] = doc_summary
+        
+    # find most specific section summary
+    header_path = item.get("header_path", [])
+    if header_path and section_summaries:
+        # iterate reversed (deepest header first)
+        for h in reversed(header_path):
+            h_name = h.get("name", "")
+            if h_name and h_name in section_summaries:
+                clean_metadata["section_summary"] = section_summaries[h_name]
+                break
+        
     # add existing metadata fields if primitive
     for k, v in metadata.items():
         if isinstance(v, (str, int, float, bool)) and v is not None:
@@ -63,7 +81,6 @@ def prepare_chunk_for_store(item: Dict[str, Any]) -> Dict[str, Any]:
             clean_metadata[k] = v
             
     # handle header_path (complex object) -> stringify for now
-    header_path = item.get("header_path", [])
     if header_path:
         # extract just the names as a breadcrumb string
         breadcrumbs = " > ".join([h.get("name", "") for h in header_path])
@@ -89,8 +106,8 @@ def seed_database():
         return
 
     logger.info(f"loading chunks from {chunks_path}...")
-    raw_items = load_chunks(chunks_path)
-    logger.info(f"loaded {len(raw_items)} chunks.")
+    raw_items, doc_summary, section_summaries = load_chunks(chunks_path)
+    logger.info(f"loaded {len(raw_items)} chunks. doc_summary found: {bool(doc_summary)}")
     
     # process in batches
     BATCH_SIZE = 50
@@ -98,7 +115,7 @@ def seed_database():
     batch_chunks = []
     
     for i, item in enumerate(raw_items):
-        processed = prepare_chunk_for_store(item)
+        processed = prepare_chunk_for_store(item, doc_summary, section_summaries)
         if processed:
             batch_chunks.append(processed)
             

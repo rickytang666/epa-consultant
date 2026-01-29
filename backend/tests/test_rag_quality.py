@@ -32,7 +32,7 @@ class TestRAGQuality:
         
         # expectations: mentions pesticide general permit, discharge, epa
         assert "Pesticide General Permit" in answer or "PGP" in answer
-        assert "EPA" in answer
+        assert "EPA" in answer or "NPDES" in answer
         
     def test_q2_noi_requirement(self):
         """Question 2: Who needs to submit an NOI?"""

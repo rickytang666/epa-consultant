@@ -48,15 +48,42 @@ def query_rag(query: str) -> Generator[dict[str, Any], None, None]:
     }
 
     # 3. construct prompt
+    # extract document summary from first chunk if available
+    doc_summary = ""
+    for c in chunks:
+        if c.get("metadata", {}).get("document_summary"):
+            doc_summary = c["metadata"]["document_summary"]
+            break
+            
     system_prompt = (
         "You are an expert EPA consultant helper. "
         "Use the provided context to answer the user's question. "
-        "If the answer is not in the context, say you don't know."
+        "If the answer is not in the context, say you don't know.\n\n"
     )
+    
+    if doc_summary:
+        system_prompt += f"Document Summary: {doc_summary}\n"
+
+    # build context with section summaries
+    context_parts = []
+    for c in chunks:
+        meta = c.get("metadata", {})
+        part = ""
+        # add header path for context
+        if "header_path_str" in meta:
+            part += f"[Source: {meta['header_path_str']}]\n"
+        # add section summary
+        if "section_summary" in meta:
+            part += f"[Section Summary: {meta['section_summary']}]\n"
+        
+        part += f"{c['text']}"
+        context_parts.append(part)
+
+    context_text = "\n\n---\n\n".join(context_parts)
     
     user_prompt = f"Context:\n{context_text}\n\nQuestion: {query}"
     
-    # 3. generate answer (streaming)
+    # 4. generate answer (streaming)
     # try openrouter first
     if or_client:
         try:
