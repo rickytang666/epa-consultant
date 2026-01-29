@@ -37,19 +37,67 @@ Extracts markdown from PDFs via [DataLab API](https://www.datalab.to).
 - `extract_pdf_async()` - Async version using httpx
 - Outputs JSON with markdown and page delimiters to `data/extracted/`
 
-### `ingest.py`
+### `ingest.py` - Main Orchestrator
 
-Main ingestion class `DocumentIngestor` with the following pipeline:
+Streamlined orchestrator (~100 lines) that coordinates the entire pipeline:
 
-| Step | Method                          | Description                                      |
-| ---- | ------------------------------- | ------------------------------------------------ |
-| 1    | `_split_by_page()`              | Splits markdown by page delimiters               |
-| 2    | `_process_text_pages()`         | Extracts sections and builds header paths        |
-| 3    | `_correct_headers()`            | LLM-based header level correction                |
-| 4    | `_merge_sections()`             | Combines small chunks under same header          |
-| 5    | `_split_chunks()`               | Splits large chunks for RAG (default 1000 chars) |
-| 6    | `generate_skeleton_summaries()` | Bottom-up hierarchical summaries                 |
-| 7    | `generate_document_summary()`   | 2-8 sentence document overview                   |
+```python
+DocumentIngestor(fix_headers=True, chunk_size=1000, chunk_overlap=200)
+  .ingest(markdown_text, filename) -> ProcessedDocument
+```
+
+**Pipeline Steps**:
+
+1. Parse markdown → `parsing.split_by_page()`, `parsing.process_text_pages()`
+2. Correct headers (optional) → `header_correction.correct_headers()`
+3. Merge small chunks → `chunking.merge_chunks()`
+4. Split large chunks → `chunking.split_chunks()`
+5. Build header tree → `header_correction.build_header_tree()`
+
+### `llm_client.py` - LLM Wrapper
+
+Unified LLM interface with **OpenAI primary, Gemini fallback**:
+
+- `chat_completion()` - Sync completion with auto-fallback
+- `async_chat_completion()` - Async version
+- Supports structured output (Pydantic models)
+- Cost tracking for both providers
+
+**Fallback Logic**: If OpenAI fails → automatically tries Gemini 2.0 Flash (FREE tier)
+
+### `parsing.py` - Markdown Parsing
+
+Extract sections, headers, and tables from markdown:
+
+- `split_by_page()` - Split by page delimiters
+- `parse_sections()` - Extract sections based on headers
+- `extract_tables()` - Extract markdown tables with improved detection
+- `process_text_pages()` - Main processing pipeline
+
+### `chunking.py` - Chunk Operations
+
+Merge and split text chunks for optimal RAG performance:
+
+- `merge_chunks()` - Combine small chunks under same header
+- `split_chunks()` - Split large chunks with overlap (preserves `chunk_index`)
+
+**Key Logic**: Tables never merged/split, uses `RecursiveCharacterTextSplitter`
+
+### `header_correction.py` - Header Hierarchy Fixing
+
+LLM-based header level correction using section numbering:
+
+- `correct_headers()` - Main correction logic with LLM
+- `apply_corrections()` - Apply fixes using section numbering (1.0 → 1.1 → 1.1.1)
+- `build_header_tree()` - Build hierarchical header tree
+
+### `summarization.py` - LLM Summarization
+
+Generate hierarchical summaries (Sprint 2 feature):
+
+- `generate_section_summaries()` - Bottom-up async summarization
+- `generate_section_summaries_sync()` - Sync wrapper
+- `generate_document_summary()` - Overall document summary
 
 #### Header Parsing
 
@@ -116,71 +164,5 @@ uv run python scripts/run/run_parsing.py --skip-summaries
 | `data/raw/`       | Input PDFs                                            |
 | `data/extracted/` | JSON output from pdf_extractor (markdown + metadata)  |
 | `data/processed/` | Final processed JSON (chunks, summaries, header_tree) |
-
-## Output Schema
-
-```json
-{
-  "document_id": "uuid-string",
-  "filename": "document.pdf",
-  "document_summary": "2-8 sentence overview...",
-  "section_summaries": {
-    "Section Name": "Summary of section...",
-    "Section > Subsection": "Summary of subsection..."
-  },
-  "header_tree": {
-    "Top Level Header": {
-      "Nested Header": {},
-      "Another Nested": {}
-    }
-  },
-  "costs": {
-    "header_correction": 0.0,
-    "skeleton_summaries": 0.25,
-    "document_summary": 0.01,
-    "total": 0.26
-  },
-  "chunks": [
-    {
-      "chunk_id": "chunk_001",
-      "document_id": "uuid-string",
-      "content": "Chunk text content...",
-      "chunk_index": 1,
-      "location": { "page_number": 1 },
-      "header_path": [
-        { "level": "Header 1", "name": "Section Name" },
-        { "level": "Header 2", "name": "Subsection Name" }
-      ],
-      "metadata": {
-        "is_table": false
-      }
-    },
-    {
-      "chunk_id": "chunk_042",
-      "document_id": "uuid-string",
-      "content": "| Type | Amount |...",
-      "chunk_index": 42,
-      "location": { "page_number": 15 },
-      "header_path": [{ "level": "Header 1", "name": "Fees" }],
-      "metadata": {
-        "is_table": true,
-        "table_id": "table_003",
-        "table_title": ""
-      }
-    }
-  ]
-}
-```
-
-## Costs
-
-Example costs for a 174-page document (`2026-pgp.pdf`):
-
-| Step                         | Cost       |
-| ---------------------------- | ---------- |
-| PDF Extraction (DataLab API) | ~$0.53     |
-| Skeleton Summaries           | ~$0.25     |
-| Document Summary             | ~$0.01     |
-| **Total**                    | **~$0.79** |
 
 > **Note:** PDF extraction could alternatively use [pymupdf4llm](https://github.com/pymupdf/pymupdf4llm) (open-source, free) which performs nearly as well but struggles with complex table extraction.

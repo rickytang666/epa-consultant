@@ -36,16 +36,14 @@ def main():
         filename=filename
     )
     
-    print(f"Total pages: {doc.total_pages}")
-    print(f"Merged Section Chunks (for summaries): {len(doc.section_chunks)}")
     print(f"Final RAG Chunks: {len(doc.chunks)}")
     
-    # Generate Skeleton Summaries using the section_chunks
+    # Generate Skeleton Summaries using the chunks
     print("=" * 60)
     print("GENERATING SKELETON SUMMARIES")
     print("=" * 60)
     
-    summaries, summary_cost = ingestor.generate_skeleton_summaries_sync(doc.section_chunks)
+    summaries, summary_cost = ingestor.generate_skeleton_summaries_sync(doc.chunks)
     
     # Update doc costs for display/completeness
     doc.costs["skeleton_summaries"] = summary_cost

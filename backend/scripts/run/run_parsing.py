@@ -70,7 +70,7 @@ def main():
             # Generate summaries by default
             if not args.skip_summaries:
                 print("Generating skeleton summaries...")
-                summaries, sum_cost = ingestor.generate_skeleton_summaries_sync(doc.section_chunks)
+                summaries, sum_cost = ingestor.generate_skeleton_summaries_sync(doc.chunks)
                 doc.section_summaries = summaries
                 
                 print("Generating document summary...")
