@@ -58,6 +58,8 @@ def query_rag(query: str) -> Generator[dict[str, Any], None, None]:
     system_prompt = (
         "You are an expert EPA consultant helper. "
         "Use the provided context to answer the user's question. "
+        "Your answers must be grounded in the context. "
+        "When referencing specific rules or sections, cite the source using the format [Source: Header > Path]. "
         "If the answer is not in the context, say you don't know.\n\n"
     )
     

@@ -12,8 +12,8 @@ def main():
     
     print("running manual rag test (real api call)...")
     
-    # query
-    query = "What is the EPA?"
+    # query specific for citations
+    query = "What are the eligibility criteria for the PGP? Please cite the specific sections."
     print(f"\nQuestion: {query}")
     print("Answer: ", end="", flush=True)
     
