@@ -27,10 +27,6 @@ cp .env.example .env
 backend/
 ├── main.py                   # fastapi app entry point
 ├── data_processing/          # data eng owns this
-│   ├── pdf_parser.py
-│   ├── chunker.py
-│   ├── table_extractor.py
-│   └── metadata_builder.py
 ├── ml/                       # ml/ai eng owns this
 │   ├── embeddings.py
 │   ├── vector_store.py
