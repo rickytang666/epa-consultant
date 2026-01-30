@@ -1,19 +1,20 @@
 import { useState, useCallback } from 'react';
+import type { Message, SourceChunk, Citation } from '../types';
 
-interface Message {
-    role: "user" | "assistant";
-    content: string;
-}
 
 export function useChat() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+
+    // State for sources (citations)
+    const [sources, setSources] = useState<Citation[]>([]);
 
     const sendMessage = useCallback(async (content: string) => {
         // 1. Add user message immediately
         const userMsg: Message = { role: "user", content };
         setMessages(prev => [...prev, userMsg]);
         setIsLoading(true);
+        setSources([]); // Reset sources for new query
 
         try {
             // 2. Prepare assistant message placeholder
@@ -62,8 +63,24 @@ export function useChat() {
                             }
                             return newHistory;
                         });
+                    } else if (trimmedLine.startsWith('sources: ')) {
+                        // Extract and parse sources payload
+                        try {
+                            const jsonStr = trimmedLine.slice(9);
+                            const rawSources = JSON.parse(jsonStr) as SourceChunk[];
+                            // Map to frontend Citation model
+                            const citations: Citation[] = rawSources.map(s => ({
+                                id: s.chunk_id,
+                                text: s.text,
+                                page: s.metadata.page_number,
+                                docId: s.metadata.document_id
+                            }));
+
+                            setSources(citations);
+                        } catch (e) {
+                            console.error("Failed to parse sources:", e);
+                        }
                     }
-                    // Explicitly IGNORE 'sources:' lines
                 }
             }
 
@@ -77,7 +94,9 @@ export function useChat() {
 
     return {
         messages,
+        sources,
         sendMessage,
         isLoading
     };
+
 }

@@ -1,16 +1,19 @@
 import { Button } from '@/components/ui/button';
 import { ChatList } from '@/components/chat/ChatList';
 import { ChatInput } from '@/components/chat/ChatInput';
-import { useChat } from '@/hooks/useChat';
+import type { Message } from '@/types';
 import { BookOpen } from 'lucide-react';
 
 interface ChatLayoutProps {
+    messages: Message[];
+    sendMessage: (content: string) => void;
+    isLoading: boolean;
     onToggleContext: () => void;
     isContextOpen: boolean;
 }
 
-export function ChatLayout({ onToggleContext, isContextOpen }: ChatLayoutProps) {
-    const { messages, sendMessage, isLoading } = useChat();
+export function ChatLayout({ messages, sendMessage, isLoading, onToggleContext, isContextOpen }: ChatLayoutProps) {
+
 
     return (
         <div className="flex h-full flex-col">

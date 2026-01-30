@@ -23,7 +23,8 @@ async def query(request: QueryRequest):
             if chunk["type"] == "content":
                 yield f"content: {chunk['delta']}\n\n"
             elif chunk["type"] == "sources":
-                yield f"sources: {chunk['data']}\n\n"
+                import json
+                yield f"sources: {json.dumps(chunk['data'])}\n\n"
         yield "state: [DONE]\n\n"
     
     return StreamingResponse(generate(), media_type="text/event-stream")

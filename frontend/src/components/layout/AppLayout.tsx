@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useChat } from '@/hooks/useChat';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,14 @@ export function AppLayout({ defaultLayout: _defaultLayout = [20, 50, 30] }: AppL
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isContextOpen, setIsContextOpen] = useState(false);
     const sidebarRef = useRef<PanelImperativeHandle>(null);
+
+    const { messages, sendMessage, isLoading, sources } = useChat();
+
+    // Auto-open context panel when sources arrive
+    // Auto-open context panel when sources arrive
+    useEffect(() => {
+        if (sources.length > 0) setIsContextOpen(true);
+    }, [sources]);
 
     return (
         <TooltipProvider delayDuration={0}>
@@ -49,8 +58,11 @@ export function AppLayout({ defaultLayout: _defaultLayout = [20, 50, 30] }: AppL
                 <ResizableHandle withHandle />
 
                 {/* MIDDLE: Chat */}
-                <ResizablePanel defaultSize="45" minSize="35" className="h-full">
+                <ResizablePanel defaultSize="40" minSize="30" className="h-full">
                     <ChatLayout
+                        messages={messages}
+                        sendMessage={sendMessage}
+                        isLoading={isLoading}
                         onToggleContext={() => setIsContextOpen(prev => !prev)}
                         isContextOpen={isContextOpen}
                     />
@@ -60,8 +72,11 @@ export function AppLayout({ defaultLayout: _defaultLayout = [20, 50, 30] }: AppL
                 {isContextOpen && (
                     <>
                         <ResizableHandle withHandle />
-                        <ResizablePanel defaultSize="35" minSize="25" maxSize="75">
-                            <ContextPanel onClose={() => setIsContextOpen(false)} />
+                        <ResizablePanel defaultSize="40" minSize="30" maxSize="80">
+                            <ContextPanel
+                                sources={sources}
+                                onClose={() => setIsContextOpen(false)}
+                            />
                         </ResizablePanel>
                     </>
                 )}
