@@ -12,17 +12,20 @@ def main():
     
     print("running manual rag test (real api call)...")
     
-    # query
-    query = "What is the EPA?"
+    # query specific for citations
+    query = "What are the eligibility criteria for the PGP? Please cite the specific sections."
     print(f"\nQuestion: {query}")
     print("Answer: ", end="", flush=True)
     
     # stream response
     try:
         chunks = []
-        for chunk in query_rag(query):
-            print(chunk, end="", flush=True)
-            chunks.append(chunk)
+        for event in query_rag(query):
+            if event["type"] == "content":
+                print(event["delta"], end="", flush=True)
+                chunks.append(event["delta"])
+            elif event["type"] == "sources":
+                print(f"\n[Sources: {len(event['data'])} found]\n")
         
         if not chunks:
             print("\n[warning] no answer generated. is the database seeded?")

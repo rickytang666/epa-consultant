@@ -28,6 +28,10 @@ uv.lock
 
 # data files
 data/*
+!data/.gitkeep
+!data/*/
+data/*/**
+!data/**/.gitkeep
 
 # testing
 .pytest_cache/
