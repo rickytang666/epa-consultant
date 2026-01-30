@@ -23,34 +23,82 @@ google_client = None
 if GOOGLE_API_KEY:
     google_client = genai.Client(api_key=GOOGLE_API_KEY)
 
-def query_rag(query: str) -> Generator[str, None, None]:
+def query_rag(query: str, top_k: int = 3) -> Generator[dict[str, Any], None, None]:
     """
     answer a query using rag
     
     args:
         query: user question
+        top_k: number of chunks to retrieve (default 3)
         
     yields:
         chunks of the answer (streaming)
     """
     if not query:
-        yield ""
+        yield {"type": "content", "delta": ""}
         return
 
     # 1. retrieve context
-    chunks = retrieve_relevant_chunks(query, n_results=5)
-    context_text = "\n\n".join([c["text"] for c in chunks])
+    # optimize: reduce k to 3 for speed/cost, usually sufficient for RAG
+    chunks = retrieve_relevant_chunks(query, n_results=top_k)
     
-    # 2. construct prompt
+    # optimize: truncate duplicate or massive chunks to avoid token limit errors
+    # average chunk is ~800 chars, but outliers can be 30k+
+    MAX_CHUNK_CHARS = 4000 
+    
+    truncated_chunks = []
+    for c in chunks:
+        # shallow copy to avoid mutating original for sources
+        c_copy = c.copy()
+        if len(c_copy["text"]) > MAX_CHUNK_CHARS:
+            c_copy["text"] = c_copy["text"][:MAX_CHUNK_CHARS] + "... [truncated]"
+        truncated_chunks.append(c_copy)
+
+    # 2. Yield Sources Event immediately
+    yield {
+        "type": "sources",
+        "data": chunks  # List of dicts with file, page, text, etc.
+    }
+
+    # 3. construct prompt
+    # extract document summary from first chunk if available
+    doc_summary = ""
+    for c in chunks:
+        if c.get("metadata", {}).get("document_summary"):
+            doc_summary = c["metadata"]["document_summary"]
+            break
+            
     system_prompt = (
         "You are an expert EPA consultant helper. "
         "Use the provided context to answer the user's question. "
-        "If the answer is not in the context, say you don't know."
+        "Your answers must be grounded in the context. "
+        "When referencing specific rules or sections, cite the source using the format [Source: Header > Path]. "
+        "If the answer is not in the context, say you don't know.\n\n"
     )
+    
+    if doc_summary:
+        system_prompt += f"Document Summary: {doc_summary}\n"
+
+    # build context with section summaries
+    context_parts = []
+    for c in truncated_chunks:
+        meta = c.get("metadata", {})
+        part = ""
+        # add header path for context
+        if "header_path_str" in meta:
+            part += f"[Source: {meta['header_path_str']}]\n"
+        # add section summary
+        if "section_summary" in meta:
+            part += f"[Section Summary: {meta['section_summary']}]\n"
+        
+        part += f"{c['text']}"
+        context_parts.append(part)
+
+    context_text = "\n\n---\n\n".join(context_parts)
     
     user_prompt = f"Context:\n{context_text}\n\nQuestion: {query}"
     
-    # 3. generate answer (streaming)
+    # 4. generate answer (streaming)
     # try openrouter first
     if or_client:
         try:
@@ -63,8 +111,12 @@ def query_rag(query: str) -> Generator[str, None, None]:
                 stream=True
             )
             for chunk in stream:
-                if chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+                content = chunk.choices[0].delta.content
+                if content:
+                    yield {
+                        "type": "content", 
+                        "delta": content
+                    }
             return
         except Exception:
             pass # fallback
@@ -81,11 +133,20 @@ def query_rag(query: str) -> Generator[str, None, None]:
             )
             # simulate streaming for now
             if hasattr(response, 'text') and response.text:
-                yield response.text
+                yield {
+                    "type": "content", 
+                    "delta": response.text
+                }
                 return
         except Exception as e:
-            yield f"Error generating response: {e}"
+            yield {
+                "type": "content", 
+                "delta": f"Error generating response: {e}"
+            }
             return
             
     if not or_client and not google_client:
-        yield "Configuration Error: No API keys found (OpenRouter or Google)."
+        yield {
+            "type": "content", 
+            "delta": "Configuration Error: No API keys found (OpenRouter or Google)."
+        }
