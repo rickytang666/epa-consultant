@@ -81,7 +81,7 @@ def get_embedding_sync(text: str) -> List[float]:
     return result
 
 
-def get_embeddings_batch_sync(texts: List[float]) -> List[List[float]]:
+def get_embeddings_batch_sync(texts: List[str]) -> List[List[float]]:
     """Synchronous wrapper for get_embeddings_batch. Use async version when possible."""
     import asyncio
     import threading

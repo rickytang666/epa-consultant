@@ -101,13 +101,22 @@ async def query_rag(query: str) -> AsyncGenerator[dict[str, Any], None]:
             stream=True
         )
         
+        # print(f"DEBUG: stream initialized for rag_generation")
         async for chunk in stream:
-            content = chunk.choices[0].delta.content
+            content = None
+            try:
+                content = chunk.choices[0].delta.content
+            except (AttributeError, IndexError):
+                # Handle different chunk structures if necessary
+                pass
+                
             if content:
+                # print(f"DEBUG: yielding chunk: {content[:20]}...")
                 yield {
                     "type": "content", 
                     "delta": content
                 }
+        # print("DEBUG: stream completed")
     except Exception as e:
         yield {
             "type": "content", 

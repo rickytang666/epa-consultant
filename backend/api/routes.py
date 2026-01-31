@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
+import json
 from api.schemas import QueryRequest, QueryResponse, TableResponse
 from ml.rag_pipeline import query_rag
 
@@ -23,7 +24,6 @@ async def query(request: QueryRequest):
             if chunk["type"] == "content":
                 yield f"content: {chunk['delta']}\n\n"
             elif chunk["type"] == "sources":
-                import json
                 yield f"sources: {json.dumps(chunk['data'])}\n\n"
         yield "state: [DONE]\n\n"
     

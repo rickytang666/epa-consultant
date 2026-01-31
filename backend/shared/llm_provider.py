@@ -213,7 +213,9 @@ class LLMProvider:
         max_tokens: Optional[int],
         **kwargs
     ):
-        """Google Gemini API call (sync wrapper for now)."""
+        """Google Gemini API call (non-blocking wrapper)."""
+        import asyncio
+        
         # Convert messages to Google format
         prompt = self._messages_to_google_prompt(messages)
         
@@ -228,12 +230,25 @@ class LLMProvider:
         if stream:
             # Google streaming - wrap in async generator
             async def google_stream_wrapper():
-                response = client.models.generate_content_stream(
+                # Run sync streaming call in a thread to get the iterator
+                response = await asyncio.to_thread(
+                    client.models.generate_content_stream,
                     model=model,
                     contents=prompt,
                     config=config
                 )
-                for chunk in response:
+                
+                # Iterate over the sync response in a thread to avoid blocking
+                def get_next_chunk(it):
+                    try:
+                        return next(it)
+                    except StopIteration:
+                        return None
+
+                while True:
+                    chunk = await asyncio.to_thread(get_next_chunk, response)
+                    if chunk is None:
+                        break
                     if chunk.text:
                         # Mimic OpenAI chunk structure
                         yield type('Chunk', (), {
@@ -244,7 +259,9 @@ class LLMProvider:
             
             return google_stream_wrapper()
         else:
-            response = client.models.generate_content(
+            # Run sync call in a thread to avoid blocking event loop
+            response = await asyncio.to_thread(
+                client.models.generate_content,
                 model=model,
                 contents=prompt,
                 config=config
@@ -253,21 +270,21 @@ class LLMProvider:
                 "content": response.text,
                 "model": model
             }
-    
+
     def _messages_to_google_prompt(self, messages: List[Dict[str, str]]) -> str:
         """Convert OpenAI-style messages to Google prompt format."""
-        # Simple conversion - combine all messages
+        # More structured conversion for Gemini
         parts = []
         for msg in messages:
             role = msg.get("role", "user")
             content = msg.get("content", "")
             if role == "system":
-                parts.append(f"Instructions: {content}")
+                parts.append(f"INSTRUCTIONS:\n{content}")
             elif role == "user":
-                parts.append(f"User: {content}")
+                parts.append(f"USER:\n{content}")
             elif role == "assistant":
-                parts.append(f"Assistant: {content}")
-        return "\n\n".join(parts)
+                parts.append(f"ASSISTANT:\n{content}")
+        return "\n\n---\n\n".join(parts)
     
     async def embed(
         self,
@@ -322,9 +339,11 @@ class LLMProvider:
             return [item.embedding for item in response.data]
         
         elif provider == "google":
+            import asyncio
             client = self.clients["google"]
-            # Google embeddings are sync
-            result = client.models.embed_content(
+            # Google embeddings are sync, wrap in thread
+            result = await asyncio.to_thread(
+                client.models.embed_content,
                 model=model,
                 contents=texts
             )

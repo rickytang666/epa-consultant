@@ -81,17 +81,19 @@ async def retrieve_relevant_chunks(query: str, n_results: int = 10) -> List[Dict
         return []
         
     # 1. vector search
+    import asyncio
     embedding = await get_embedding(query)
-    vector_results = search_chunks(query_embedding=embedding, n_results=n_results*2) # fetch more for fusion
+    vector_results = await asyncio.to_thread(search_chunks, query_embedding=embedding, n_results=n_results*2) # fetch more for fusion
     
     # 2. keyword search (bm25)
-    bm25, chunks_cache = _load_bm25_index()
+    import asyncio
+    bm25, chunks_cache = await asyncio.to_thread(_load_bm25_index)
     keyword_results = []
     
     if bm25:
         tokenized_query = query.lower().split()
         # get top n*2 docs
-        doc_scores = bm25.get_scores(tokenized_query)
+        doc_scores = await asyncio.to_thread(bm25.get_scores, tokenized_query)
         top_n_indices = sorted(range(len(doc_scores)), key=lambda i: doc_scores[i], reverse=True)[:n_results*2]
         
         # normalize to vector store format
