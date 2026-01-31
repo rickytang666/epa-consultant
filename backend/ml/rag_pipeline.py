@@ -199,14 +199,14 @@ def _generate_standalone_query(query: str, chat_history: list[dict[str, str]], c
         return query
 
 
-def query_rag(query: str, chat_history: list[dict[str, str]] = None, top_k: int = 3) -> Generator[dict[str, Any], None, None]:
+def query_rag(query: str, chat_history: list[dict[str, str]] = None, top_k: int = 10) -> Generator[dict[str, Any], None, None]:
     """
     answer a query using rag with conversation memory
     
     args:
         query: user question
         chat_history: list of {"role": "user"|"assistant", "content": "..."}
-        top_k: number of chunks to retrieve (default 3)
+        top_k: number of chunks to retrieve (default 10)
         
     yields:
         chunks of the answer (streaming)

@@ -11,12 +11,11 @@ def test_top_k():
     load_dotenv()
     
     questions = [
-        "What are the eligibility criteria for the PGP?",
-        "How does the EPA define an Operator?",
-        "What is the permit expiration date?"
+        "When does this permit expire?",
+        "Are discharges to Tier 3 waters eligible for coverage?"
     ]
     
-    k_values = [1, 3, 5]
+    k_values = [3, 5, 10]
     
     for q in questions:
         print(f"\n{'='*60}")
@@ -32,13 +31,16 @@ def test_top_k():
             try:
                 for event in query_rag(q, top_k=k):
                     if event["type"] == "content":
-                        chunks.append(event["delta"])
+                        # suppress generation output for cleaner debugging
+                        pass 
                     elif event["type"] == "sources":
                         sources = event["data"]
                 
-                answer = "".join(chunks).replace("\n", " ").strip()[:200] + "..."
                 print(f"Sources Found: {len(sources)}")
-                print(f"Answer Preview: {answer}")
+                for i, s in enumerate(sources):
+                    print(f"  [{i+1}] {s.get('text', '')[:150]}...")
+                    if 'expire' in s.get('text', '').lower() or 'effective' in s.get('text', '').lower():
+                        print(f"      *** POTENTIAL HIT ***")
                 
             except Exception as e:
                 print(f"Error: {e}")

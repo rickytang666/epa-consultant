@@ -62,7 +62,7 @@ def reciprocal_rank_fusion(results: Dict[str, Dict[str, Any]], k: int = 60) -> L
     sorted_items = sorted(fused_scores.values(), key=lambda x: x["score"], reverse=True)
     return [x["item"] for x in sorted_items]
 
-def retrieve_relevant_chunks(query: str, n_results: int = 5) -> List[Dict[str, Any]]:
+def retrieve_relevant_chunks(query: str, n_results: int = 10) -> List[Dict[str, Any]]:
     """
     retrieve relevant chunks using hybrid search (vector + bm25)
     
