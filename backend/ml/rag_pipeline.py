@@ -150,3 +150,189 @@ def query_rag(query: str, top_k: int = 3) -> Generator[dict[str, Any], None, Non
             "type": "content", 
             "delta": "Configuration Error: No API keys found (OpenRouter or Google)."
         }
+
+
+def _generate_standalone_query(query: str, chat_history: list[dict[str, str]], client: OpenAI) -> str:
+    """
+    rewrite query to be standalone based on history via llm
+    """
+    if not chat_history:
+        return query
+
+    # keep last 2 turns to save tokens
+    recent_history = chat_history[-2:]
+    
+    history_str = ""
+    for msg in recent_history:
+        role = "User" if msg.get("role") == "user" else "Assistant"
+        content = msg.get("content", "")
+        history_str += f"{role}: {content}\n"
+
+    system_prompt = (
+        "You are a query rewriting assistant. "
+        "Rewrite the following user question to be a standalone question that can be understood without the chat history. "
+        "Replace pronouns (it, they, this) with specific references from the history. "
+        "Do NOT answer the question. Return ONLY the rewritten question. "
+        "If the question is already standalone, return it exactly as is."
+    )
+    
+    user_prompt = f"Chat History:\n{history_str}\nUser Question: {query}\n\nRewritten Question:"
+
+    try:
+        response = client.chat.completions.create(
+            model="meta-llama/llama-3-8b-instruct",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.1, # low temp for precision
+            max_tokens=100
+        )
+        rewritten = response.choices[0].message.content.strip()
+        # fallback if model fails or returns empty
+        return rewritten if rewritten else query
+    except Exception:
+        # fallback to original query if rewrite fails
+        return query
+
+
+def query_rag(query: str, chat_history: list[dict[str, str]] = None, top_k: int = 3) -> Generator[dict[str, Any], None, None]:
+    """
+    answer a query using rag with conversation memory
+    
+    args:
+        query: user question
+        chat_history: list of {"role": "user"|"assistant", "content": "..."}
+        top_k: number of chunks to retrieve (default 3)
+        
+    yields:
+        chunks of the answer (streaming)
+    """
+    if not query:
+        yield {"type": "content", "delta": ""}
+        return
+
+    # 1. contextualize query (memory)
+    search_query = query
+    if chat_history and or_client:
+        search_query = _generate_standalone_query(query, chat_history, or_client)
+        # print(f"Rewritten Query: {search_query}") 
+
+    # 2. retrieve context using standalone query
+    # optimize: reduce k to 3 for speed/cost, usually sufficient for RAG
+    chunks = retrieve_relevant_chunks(search_query, n_results=top_k)
+    
+    # optimize: truncate duplicate or massive chunks to avoid token limit errors
+    # average chunk is ~800 chars, but outliers can be 30k+
+    MAX_CHUNK_CHARS = 4000 
+    
+    truncated_chunks = []
+    for c in chunks:
+        # shallow copy to avoid mutating original for sources
+        c_copy = c.copy()
+        if len(c_copy["text"]) > MAX_CHUNK_CHARS:
+            c_copy["text"] = c_copy["text"][:MAX_CHUNK_CHARS] + "... [truncated]"
+        truncated_chunks.append(c_copy)
+
+    # 3. yield sources event immediately
+    yield {
+        "type": "sources",
+        "data": chunks  # List of dicts with file, page, text, etc.
+    }
+
+    # 4. construct prompt
+    # extract document summary from first chunk if available
+    doc_summary = ""
+    for c in chunks:
+        if c.get("metadata", {}).get("document_summary"):
+            doc_summary = c["metadata"]["document_summary"]
+            break
+            
+    system_prompt = (
+        "You are an expert EPA consultant helper. "
+        "Use the provided context to answer the user's question. "
+        "Your answers must be grounded in the context. "
+        "When referencing specific rules or sections, cite the source using the format [Source: Header > Path]. "
+        "If the answer is not in the context, say you don't know.\n\n"
+    )
+    
+    if doc_summary:
+        system_prompt += f"Document Summary: {doc_summary}\n"
+
+    # build context with section summaries
+    context_parts = []
+    for c in truncated_chunks:
+        meta = c.get("metadata", {})
+        part = ""
+        # add header path for context
+        if "header_path_str" in meta:
+            part += f"[Source: {meta['header_path_str']}]\n"
+        # add section summary
+        if "section_summary" in meta:
+            part += f"[Section Summary: {meta['section_summary']}]\n"
+        
+        part += f"{c['text']}"
+        context_parts.append(part)
+    
+    context_text = "\n\n---\n\n".join(context_parts)
+    
+    # use original query in prompt, but standalone drove retrieval
+    user_prompt = f"Context:\n{context_text}\n\nQuestion: {query}"
+    
+    if chat_history:
+        # optionally append recent history to prompt so model knows flow
+        # simpler to just let it answer the specific question given context
+        pass
+
+    # 5. generate answer (streaming)
+    # try openrouter first
+    if or_client:
+        try:
+            stream = or_client.chat.completions.create(
+                model="openai/gpt-oss-120b", # switching to stronger model for generation? or keep same
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                stream=True
+            )
+            for chunk in stream:
+                content = chunk.choices[0].delta.content
+                if content:
+                    yield {
+                        "type": "content", 
+                        "delta": content
+                    }
+            return
+        except Exception:
+            pass # fallback
+            
+    # fallback to google gemini
+    if google_client:
+        try:
+            # gemini streaming
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+            response = google_client.models.generate_content(
+                model="gemini-2.5-flash-lite", 
+                contents=full_prompt,
+                config=None
+            )
+            # simulate streaming for now
+            if hasattr(response, 'text') and response.text:
+                yield {
+                    "type": "content", 
+                    "delta": response.text
+                }
+                return
+        except Exception as e:
+            yield {
+                "type": "content", 
+                "delta": f"Error generating response: {e}"
+            }
+            return
+            
+    if not or_client and not google_client:
+        yield {
+            "type": "content", 
+            "delta": "Configuration Error: No API keys found (OpenRouter or Google)."
+        }
