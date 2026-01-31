@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from ml.rag_pipeline import query_rag
+from ml.rag_pipeline import query_rag_sync
 
 def test_query_rag_mocked():
     """test rag pipeline logic with mocks"""
@@ -27,7 +27,7 @@ def test_query_rag_mocked():
         mock_openai.chat.completions.create.return_value = [mock_chunk1, mock_chunk2, mock_chunk3]
         
         # execute
-        generator = query_rag("What does EPA regulate?")
+        generator = query_rag_sync("What does EPA regulate?")
         
         # consume generator
         chunks = list(generator)

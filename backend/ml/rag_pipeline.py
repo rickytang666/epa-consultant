@@ -1,8 +1,8 @@
 """rag pipeline"""
 
 import os
-from typing import AsyncGenerator, Any
-from openai import AsyncOpenAI
+from typing import AsyncGenerator, Generator, Any
+from openai import AsyncOpenAI, OpenAI
 from google import genai
 from google import genai
 from ml.retrieval import retrieve_relevant_chunks
@@ -44,7 +44,7 @@ async def query_rag(query: str) -> AsyncGenerator[dict[str, Any], None]:
     print("query:", query)
     # 1. retrieve context
     # optimize: reduce k to 3 for speed/cost, usually sufficient for RAG
-    chunks = retrieve_relevant_chunks(query, n_results=top_k)
+    chunks = retrieve_relevant_chunks(query, n_results=3)
     
     # optimize: truncate duplicate or massive chunks to avoid token limit errors
     # average chunk is ~800 chars, but outliers can be 30k+
@@ -208,7 +208,7 @@ def _generate_standalone_query(query: str, chat_history: list[dict[str, str]], c
         return query
 
 
-def query_rag(query: str, chat_history: list[dict[str, str]] = None, top_k: int = 10) -> Generator[dict[str, Any], None, None]:
+def query_rag_sync(query: str, chat_history: list[dict[str, str]] = None, top_k: int = 10) -> Generator[dict[str, Any], None, None]:
     """
     answer a query using rag with conversation memory
     

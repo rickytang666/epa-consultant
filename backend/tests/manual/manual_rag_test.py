@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 # add backend to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from ml.rag_pipeline import query_rag
+from ml.rag_pipeline import query_rag_sync
 
 def main():
     load_dotenv()
@@ -20,7 +20,7 @@ def main():
     # stream response
     try:
         chunks = []
-        for event in query_rag(query):
+        for event in query_rag_sync(query):
             if event["type"] == "content":
                 print(event["delta"], end="", flush=True)
                 chunks.append(event["delta"])
