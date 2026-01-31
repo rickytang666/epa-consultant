@@ -110,7 +110,7 @@ def seed_database():
     logger.info(f"loaded {len(raw_items)} chunks. doc_summary found: {bool(doc_summary)}")
     
     # process in batches
-    BATCH_SIZE = 50
+    BATCH_SIZE = 20
     
     batch_chunks = []
     

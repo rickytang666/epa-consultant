@@ -26,13 +26,13 @@ class DocumentIngestor:
     Handles the ingestion of markdown documents.
     """
 
-    def __init__(self, fix_headers: bool = True, chunk_size: int = 1000, chunk_overlap: int = 200):
+    def __init__(self, fix_headers: bool = True, chunk_size: int = 1000, chunk_overlap: int = 200, llm_client: Optional[LLMClient] = None):
         self.fix_headers = fix_headers
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         
-        # LLM client with fallback
-        self.llm_client = LLMClient()
+        # LLM client with fallback (use injected or create new)
+        self.llm_client = llm_client if llm_client else LLMClient()
 
     def ingest(
         self, 

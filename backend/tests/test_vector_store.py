@@ -33,10 +33,10 @@ def test_insert_chunks():
         }
     ]
     
-    # mock embeddings (dim 768 for gemini)
+    # mock embeddings (dim 1536 for gemini)
     embeddings = [
-        [0.1] * 768,
-        [0.2] * 768
+        [0.1] * 1536,
+        [0.2] * 1536
     ]
     
     insert_chunks(chunks, embeddings, collection_name=collection_name)
@@ -60,12 +60,12 @@ def test_search_chunks():
     ]
     
     # mock orthogonal embeddings to ensure distinct search results
-    # dim 768
+    # dim 1536
     # vector 1: [1, 0, ...], vector 2: [0, 1, ...]
-    vec1 = [0.0] * 768
+    vec1 = [0.0] * 1536
     vec1[0] = 1.0
     
-    vec2 = [0.0] * 768
+    vec2 = [0.0] * 1536
     vec2[1] = 1.0
     
     insert_chunks(chunks, [vec1, vec2], collection_name=collection_name)

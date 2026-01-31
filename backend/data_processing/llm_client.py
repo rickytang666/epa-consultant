@@ -77,10 +77,25 @@ class LLMClient:
             client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": "hi"}],
-                max_tokens=1
+                max_completion_tokens=10
             )
             return True
         except Exception as e:
+            # Fallback for models that don't support max_completion_tokens?
+            # Actually, standard OpenAI models support it now, but let's be safe:
+            if "Unsupported parameter" in str(e) and "max_completion_tokens" in str(e):
+                # Retry with max_tokens (legacy models)
+                try:
+                    client.chat.completions.create(
+                        model=model,
+                        messages=[{"role": "user", "content": "hi"}],
+                        max_tokens=10
+                    )
+                    return True
+                except Exception as e2:
+                    logger.warning(f"OpenAI validation failed (retry): {e2}")
+                    return False
+            
             logger.warning(f"OpenAI validation failed: {e}")
             return False
 
