@@ -3,11 +3,19 @@
 import os
 from typing import Dict, Any, Optional
 from openai import OpenAI
+from pydantic import BaseModel, Field
 
 # judge metrics
 FAITHFULNESS = "faithfulness"
 RELEVANCE = "relevance"
 COMPLETENESS = "completeness"
+
+class EvaluationResult(BaseModel):
+    reasoning: str = Field(description="First, analyze the answer based on the context and query. Provide a brief explanation of your scoring.")
+    suggestion: str = Field(description="Suggestions for improvement if the answer is not perfect.")
+    faithfulness_score: int = Field(description="Score 1-5. 1=Hallucination/Contradiction, 5=Fully supported by context.")
+    relevance_score: int = Field(description="Score 1-5. 1=Irrelevant, 5=Direct, concise, and complete answer.")
+    completeness_score: int = Field(description="Score 1-5. 1=Misses core question, 5=Fully answers all parts.")
 
 class JudgeAgent:
     def __init__(self, client: Optional[OpenAI] = None):
@@ -32,17 +40,17 @@ class JudgeAgent:
             "Your job is to evaluate the quality of an AI-generated Answer based on the User Query and Retrieved Context.\n"
             "Evaluate on these criteria:\n"
             "1. Faithfulness: Is the answer derived ONLY from the context? (No hallucinations)\n"
+            "   - 1: Completely hallucinates or contradicts context.\n"
+            "   - 3: Mostly grounded but has minor external info or inaccuracies.\n"
+            "   - 5: 100% supported by context statements.\n"
             "2. Relevance: Does the answer directly address the user's query?\n"
-            "3. Completeness: Does it answer the whole question or just a part?\n\n"
-            "Output JSON format:\n"
-            "{\n"
-            '  "faithfulness_score": int (1-5),\n'
-            '  "relevance_score": int (1-5),\n'
-            '  "completeness_score": int (1-5),\n'
-            '  "overall_score": float (0.0-1.0), // normalized average\n'
-            '  "reasoning": "brief explanation",\n'
-            '  "suggestion": "what is missing or needs fixing"\n'
-            "}"
+            "   - 1: Completely irrelevant.\n"
+            "   - 3: Relevant but contains unnecessary info or is too verbose.\n"
+            "   - 5: Direct, concise, and complete answer to the query.\n"
+            "3. Completeness: Does it answer the whole question or just a part?\n"
+            "   - 1: Misses the core question.\n"
+            "   - 3: Partial answer.\n"
+            "   - 5: Fully answers all parts of the question."
         )
 
         user_prompt = (
@@ -53,33 +61,38 @@ class JudgeAgent:
         )
 
         try:
-            response = self.client.chat.completions.create(
+            # using beta.parse for structured outputs
+            completion = self.client.beta.chat.completions.parse(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                response_format={"type": "json_object"},
+                response_format=EvaluationResult,
                 temperature=0.0
             )
             
-            import json
-            result = json.loads(response.choices[0].message.content)
+            result = completion.choices[0].message.parsed
             
-            # adaptive logic: mostly concerned with low relevance or completeness
-            # faithfulness should ideally be high; if low, it's a hallucination
-            
-            score = result.get("overall_score", 0.0)
-            reason = result.get("reasoning", "")
+            # calculate overall score manually (average of 3 scores, normalized to 0-1)
+            # (f + r + c) / 3 / 5 
+            avg_score = (result.faithfulness_score + result.relevance_score + result.completeness_score) / 3.0
+            overall_score = avg_score / 5.0
             
             # threshold: if score < 0.7 (approx 3.5/5), trigger refinement
-            needs_refinement = score < 0.7
+            needs_refinement = overall_score < 0.7
             
             return {
-                "score": score,
-                "reason": reason,
+                "score": overall_score,
+                "reason": result.reasoning,
                 "needs_refinement": needs_refinement,
-                "details": result
+                "details": {
+                    "faithfulness_score": result.faithfulness_score,
+                    "relevance_score": result.relevance_score,
+                    "completeness_score": result.completeness_score,
+                    "reasoning": result.reasoning,
+                    "suggestion": result.suggestion
+                }
             }
 
         except Exception as e:
