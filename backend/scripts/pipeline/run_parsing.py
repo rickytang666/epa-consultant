@@ -72,7 +72,9 @@ def main():
 
     print(f"Found {len(files)} file(s) to parse.")
     
-    ingestor = DocumentIngestor(fix_headers=args.fix_headers)
+    # Pass the pre-validated/locked LLM client to the ingestor
+    llm_instance = llm if needs_llm else None
+    ingestor = DocumentIngestor(fix_headers=args.fix_headers, llm_client=llm_instance)
 
     for json_path in files:
         if not os.path.exists(json_path):

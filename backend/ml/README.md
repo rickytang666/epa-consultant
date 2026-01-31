@@ -1,31 +1,48 @@
 # ml/ai engineering
 
-core rag pipeline logic.
+core Adaptive RAG pipeline logic.
+
+## architecture
+
+The pipeline uses an **Adaptive RAG** approach with the following loop:
+
+1. **Query**: User asks a question.
+2. **Contextualize**: `_generate_standalone_query` uses conversation history to rewrite pronouns/references.
+3. **Retrieve**: Hybrid Search (Vector + BM25) fetches top-k (default 10) chunks.
+4. **Generate**: Initial answer generation.
+5. **Judge**: `JudgeAgent` evaluates the answer for relevance and completeness.
+   - If score < 0.7: Suggests refined search tokens -> Re-retrieves -> Re-generates.
+6. **Hallucination Check**: `HallucinationDetector` (Singleton) computes an entailment score.
 
 ## files
 
-- `embeddings.py`: handles embedding generation. supports openai (`text-embedding-3-small`) and google gemini (`embedding-001`). auto-fallback.
-- `vector_store.py`: chromadb wrapper. handles persistence, collection management, insertion, and semantic search.
-- `retrieval.py`: connects embeddings to vector store. takes a query, embeds it, and retrieves top-k chunks.
-- `rag_pipeline.py`: main entry point. `query_rag(query)` generates streaming answers using retrieved context. uses openrouter (`gpt-oss-120b`) with gemini fallback.
+- `rag_pipeline.py`: Main entry point. Implements variables handling, retry loop, and streaming response.
+- `retrieval.py`: Hybrid search implementation. Defaults to `top_k=10`.
+- `judge.py`: Self-reflection agent. Uses LLM to critique and refine answers.
+- `hallucination.py`: Runtime verification using Cross-Encoders (Singleton pattern for performance).
+- `vector_store.py`: ChromaDB wrapper.
+- `embeddings.py`: Embedding generation (OpenAI/Gemini).
 
-## scripts
+## benchmarks & tuning
 
-- `backend/scripts/seed_db.py`: loads `chunks.json`, generates embeddings, and populates chromadb. run this once.
-- `backend/scripts/manual_rag_test.py`: simple script to query the pipeline and verify end-to-end functionality.
-- `backend/tests/test_rag_quality.py`: factual QA test suite. checks answers against 5 known questions.
+- **Tuning**: Found that `top_k=10` is required to capture "Tier 3" eligibility rules (Rank 8).
+- **Prompting**: System prompt explicitly handles conditional logic (e.g., "unless", "provided that").
 
 ## usage
 
-run scripts from the `backend` directory:
+Run scripts from the `backend` directory using `uv`:
 
 ```bash
-# 1. seed the database (required first time ONLY)
-uv run python scripts/seed_db.py
+# 1. Setup & Seeding
+uv run python scripts/setup/seed_db.py
 
-# 2. run manual verification
-uv run python scripts/manual_rag_test.py
+# 2. Manual Verification
+uv run python tests/manual/manual_rag_test.py
 
-# 3. run quality tests
-uv run pytest tests/test_rag_quality.py -s
+# 3. Tuning & Quality Checks
+uv run python scripts/tuning/test_quality.py   # Spot check specific queries
+uv run pytest tests/evals/test_rag_quality.py  # Full DeepEval regression suite
+
+# 4. Integration Tests
+uv run pytest tests/integration/
 ```

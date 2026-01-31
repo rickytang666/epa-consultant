@@ -38,7 +38,7 @@ def _get_google_embedding(text: str) -> List[float]:
     result = google_client.models.embed_content(
         model=GEMINI_EMBEDDING_MODEL,
         contents=text,
-        config=types.EmbedContentConfig(output_dimensionality=768)
+        config=types.EmbedContentConfig(output_dimensionality=1536)
     )
     # result.embeddings is a list of embedding objects
     return result.embeddings[0].values
@@ -73,7 +73,7 @@ def get_embedding(text: str) -> List[float]:
     # fallback to google
     if google_client:
         try:
-            logger.info("using google gemini embeddings (dim: 768)")
+            logger.info("using google gemini embeddings (dim: 1536)")
             return _get_google_embedding(text)
         except Exception as e:
             raise RuntimeError(f"google embedding also failed: {e}")
@@ -98,19 +98,28 @@ def get_embeddings_batch(texts: List[str]) -> List[List[float]]:
     # try openai
     if openai_client:
         try:
-            response = openai_client.embeddings.create(input=texts, model=OPENAI_EMBEDDING_MODEL)
-            return [data.embedding for data in response.data]
+            # OpenAI has a strict token limit (8192) per request for this model
+            # We must split the batch into smaller sub-batches
+            SUB_BATCH_SIZE = 16 
+            all_embeddings = []
+            
+            for i in range(0, len(texts), SUB_BATCH_SIZE):
+                sub_batch = texts[i:i + SUB_BATCH_SIZE]
+                response = openai_client.embeddings.create(input=sub_batch, model=OPENAI_EMBEDDING_MODEL)
+                all_embeddings.extend([data.embedding for data in response.data])
+                
+            return all_embeddings
         except Exception as e:
             logger.warning(f"openai batch embedding failed: {e}. falling back to google gemini.")
 
     # fallback to google
     if google_client:
         try:
-            logger.info("using google gemini batch embeddings (dim: 768)")
+            logger.info("using google gemini batch embeddings (dim: 1536)")
             result = google_client.models.embed_content(
                 model=GEMINI_EMBEDDING_MODEL,
                 contents=texts,
-                config=types.EmbedContentConfig(output_dimensionality=768)
+                config=types.EmbedContentConfig(output_dimensionality=1536)
             )
             return [e.values for e in result.embeddings]
         except Exception as e:

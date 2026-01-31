@@ -31,7 +31,9 @@ backend/
 │   ├── embeddings.py
 │   ├── vector_store.py
 │   ├── rag_pipeline.py
-│   └── retrieval.py
+│   ├── retrieval.py
+│   ├── judge.py
+│   └── hallucination.py
 ├── api/                      # full-stack owns this
 │   ├── routes.py
 │   └── schemas.py
@@ -59,7 +61,10 @@ uv run uvicorn main:app --reload
 ## workflow
 
 1. **data eng**: process pdf → output `chunks.json`
-2. **ml/ai**: embed chunks → build rag pipeline → expose `query_rag()` function
+2. **ml/ai**: Adaptive RAG Pipeline (see `ml/README.md`)
+   - Hybrid Search (Vector + BM25)
+   - Self-Correction Loop (Judge Agent)
+   - Runtime Hallucination Detection
 3. **full-stack**: build api endpoints → integrate with `query_rag()` → build frontend
 
 ## integration points
