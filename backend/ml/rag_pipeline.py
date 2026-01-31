@@ -4,7 +4,9 @@ import os
 from typing import Generator, Any
 from openai import OpenAI
 from google import genai
+from google import genai
 from ml.retrieval import retrieve_relevant_chunks
+from ml.judge import JudgeAgent
 
 # config
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -284,18 +286,81 @@ def query_rag(query: str, chat_history: list[dict[str, str]] = None, top_k: int 
         # simpler to just let it answer the specific question given context
         pass
 
-    # 5. generate answer (streaming)
-    # try openrouter first
+
+    # 5. generate answer with adaptive loop
+    
+    # helper to generate text (non-streaming) for the judge
+    def generate_full_answer(s_prompt, u_prompt, model_name="openai/gpt-oss-120b"):
+        if or_client:
+            try:
+                resp = or_client.chat.completions.create(
+                    model=model_name,
+                    messages=[{"role": "system", "content": s_prompt}, {"role": "user", "content": u_prompt}]
+                )
+                return resp.choices[0].message.content
+            except:
+                return None
+        return None
+
+    # initial attempt
+    initial_answer = None
+    if or_client:
+        # yield status
+        yield {"type": "content", "delta": "**Structuring answer...**\n\n"}
+        
+        initial_answer = generate_full_answer(system_prompt, user_prompt)
+        
+        if initial_answer:
+            # judge it
+            judge = JudgeAgent(or_client)
+            evaluation = judge.evaluate_answer(search_query, context_text, initial_answer)
+            
+            # helpful debug info for user
+            # yield {"type": "content", "delta": f"*(Confidence: {evaluation['score']:.2f})*\n\n"}
+            
+            if evaluation["needs_refinement"]:
+                # yield {"type": "content", "delta": "*(Verifying information...)*\n\n"}
+                
+                # adaptive step: refine query
+                refined_query = judge.suggest_refined_query(search_query, evaluation["reason"])
+                
+                # simple re-retrieval (could be recursive, but 1-hop is usually enough)
+                new_chunks = retrieve_relevant_chunks(refined_query, n_results=top_k)
+                
+                # rebuild context with new chunks (merging or replacing)
+                # for simplicity, let's just append new unique chunks
+                existing_ids = {c["chunk_id"] for c in chunks}
+                for nc in new_chunks:
+                    if nc["chunk_id"] not in existing_ids:
+                        truncated_chunks.append(nc) # add to context list
+                
+                # rebuild prompt context
+                context_parts = [] # reset
+                for c in truncated_chunks:
+                    meta = c.get("metadata", {})
+                    part = ""
+                    if "header_path_str" in meta:
+                        part += f"[Source: {meta['header_path_str']}]\n"
+                    part += f"{c['text']}"
+                    context_parts.append(part)
+                context_text = "\n\n---\n\n".join(context_parts)
+                user_prompt = f"Context:\n{context_text}\n\nQuestion: {query}"
+                
+                # re-generate final answer
+    
+    # final streaming generation
     if or_client:
         try:
             stream = or_client.chat.completions.create(
-                model="openai/gpt-oss-120b", # switching to stronger model for generation? or keep same
+                model="openai/gpt-oss-120b",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
                 stream=True
             )
+            yield {"type": "clear", "delta": ""} # special signal to clear "thinking" text if UI supports it
+            
             for chunk in stream:
                 content = chunk.choices[0].delta.content
                 if content:
@@ -303,6 +368,14 @@ def query_rag(query: str, chat_history: list[dict[str, str]] = None, top_k: int 
                         "type": "content", 
                         "delta": content
                     }
+                    
+            # append confidence score if available
+            if initial_answer and evaluation:
+                 yield {
+                    "type": "content", 
+                    "delta": f"\n\n---\n**Confidence Score**: {evaluation['score']:.2f}/1.0"
+                }
+
             return
         except Exception:
             pass # fallback
