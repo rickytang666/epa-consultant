@@ -172,11 +172,12 @@ def _generate_standalone_query(query: str, chat_history: list[dict[str, str]], c
         history_str += f"{role}: {content}\n"
 
     system_prompt = (
-        "You are a query rewriting assistant. "
-        "Rewrite the following user question to be a standalone question that can be understood without the chat history. "
-        "Replace pronouns (it, they, this) with specific references from the history. "
-        "Do NOT answer the question. Return ONLY the rewritten question. "
-        "If the question is already standalone, return it exactly as is."
+        "You are a query enrichment assistant. "
+        "Rewrite the following user question to be a standalone, search-optimized question. "
+        "1. Replace pronouns (it, they, this) with specific references from the history. "
+        "2. Enrich the query with relevant context, specific keywords, or regulatory terms from the conversation to improve retrieval. "
+        "Do NOT answer the question. Return ONLY the enriched question. "
+        "If the question is already optimal, return it exactly as is."
     )
     
     user_prompt = f"Chat History:\n{history_str}\nUser Question: {query}\n\nRewritten Question:"
@@ -255,7 +256,8 @@ def query_rag(query: str, chat_history: list[dict[str, str]] = None, top_k: int 
         "You are an expert EPA consultant helper. "
         "Use the provided context to answer the user's question. "
         "Your answers must be grounded in the context. "
-        "Answer the question directly and concisely—avoid including information not asked for. "
+        "Format your response in Markdown. Be extremely concise and professional. Do not chat or 'yap'—get straight to the answer. "
+        "Answer the question directly—avoid including information not asked for. "
         "When referencing specific rules or sections, cite the source using the format [Source: Header > Path]. "
         "CRITICAL: Pay close attention to exceptions, conditions, and qualifiers (e.g., 'unless', 'except', 'provided that'). "
         "If a rule has exceptions, explicitly state them. Do not give a flat 'Yes' or 'No' if the answer is conditional. "
