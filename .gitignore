@@ -102,3 +102,4 @@ dmypy.json
 *.temp
 .scratch/
 plan/
+*.txt

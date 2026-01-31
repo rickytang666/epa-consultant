@@ -5,7 +5,7 @@ import logging
 from typing import List, Dict, Any
 
 # add backend to path
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from ml.embeddings import get_embeddings_batch
 from ml.vector_store import insert_chunks
@@ -110,7 +110,7 @@ def seed_database():
     logger.info(f"loaded {len(raw_items)} chunks. doc_summary found: {bool(doc_summary)}")
     
     # process in batches
-    BATCH_SIZE = 50
+    BATCH_SIZE = 20
     
     batch_chunks = []
     

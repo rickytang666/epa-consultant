@@ -40,14 +40,18 @@ def _load_bm25_index():
         print(f"error loading bm25 index: {e}")
         return None, []
 
-def reciprocal_rank_fusion(results: Dict[str, Dict[str, Any]], k: int = 60) -> List[Dict[str, Any]]:
+def reciprocal_rank_fusion(results: Dict[str, Dict[str, Any]], weights: Dict[str, float] = None, k: int = 60) -> List[Dict[str, Any]]:
     """
-    combine ranked results using RRF
-    score = 1 / (rank + k)
+    combine ranked results using Weighted RRF
+    score = weight * (1 / (rank + k))
     """
     fused_scores = {}
+    if weights is None:
+        weights = {key: 1.0 for key in results.keys()}
     
-    for _, result_list in results.items():
+    for source, result_list in results.items():
+        weight = weights.get(source, 1.0)
+        
         for rank, item in enumerate(result_list):
             chunk_id = item.get("chunk_id")
             if not chunk_id:
@@ -56,13 +60,13 @@ def reciprocal_rank_fusion(results: Dict[str, Dict[str, Any]], k: int = 60) -> L
             if chunk_id not in fused_scores:
                 fused_scores[chunk_id] = {"score": 0, "item": item}
             
-            fused_scores[chunk_id]["score"] += 1 / (rank + k)
+            fused_scores[chunk_id]["score"] += weight * (1 / (rank + k))
             
     # sort by score desc
     sorted_items = sorted(fused_scores.values(), key=lambda x: x["score"], reverse=True)
     return [x["item"] for x in sorted_items]
 
-def retrieve_relevant_chunks(query: str, n_results: int = 5) -> List[Dict[str, Any]]:
+def retrieve_relevant_chunks(query: str, n_results: int = 10) -> List[Dict[str, Any]]:
     """
     retrieve relevant chunks using hybrid search (vector + bm25)
     
@@ -110,9 +114,10 @@ def retrieve_relevant_chunks(query: str, n_results: int = 5) -> List[Dict[str, A
                 keyword_results[-1]["metadata"] = c_meta
 
     # 3. fusion
+    # TODO: tune weights
     fused_results = reciprocal_rank_fusion({
         "vector": vector_results,
         "bm25": keyword_results
-    })
+    }, weights={"vector": 1.0, "bm25": 1.0})
     
     return fused_results[:n_results]

@@ -186,19 +186,17 @@ async def generate_section_summaries(
         )
         
         model = "gpt-5-mini"
-        try:
-            response, cost = await llm_client.async_chat_completion(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                response_format=SectionSummary
-            )
-            
-            logger.info(f"Summarized '{section_name}'")
-            
-            return key, response.choices[0].message.parsed.summary, cost
-        except Exception as e:
-            logger.error(f"Summary failed for {section_name}: {e}")
-            return key, "", 0.0
+        model = "gpt-5-mini"
+        # No try/catch needed - client is validated beforehand
+        response, cost = await llm_client.async_chat_completion(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            response_format=SectionSummary
+        )
+        
+        logger.info(f"Summarized '{section_name}'")
+        
+        return key, response.choices[0].message.parsed.summary, cost
 
     # Process levels
     for level in sorted_levels:
@@ -265,15 +263,13 @@ def generate_document_summary(
     prompt = template.render(filename=filename, sections=sections)
     
     model = "gpt-5-mini"
-    try:
-        response, cost = llm_client.chat_completion(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            reasoning_effort="low"
-        )
-        content = response.choices[0].message.content or ""
-        logger.info(f"Document Summary | Cost: ${cost:.6f}")
-        return content.strip(), cost
-    except Exception as e:
-        logger.error(f"Document summary failed: {e}")
-        return "", 0.0
+    model = "gpt-5-mini"
+    # Validated client guaranteed
+    response, cost = llm_client.chat_completion(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        reasoning_effort="low"
+    )
+    content = response.choices[0].message.content or ""
+    logger.info(f"Document Summary | Cost: ${cost:.6f}")
+    return content.strip(), cost

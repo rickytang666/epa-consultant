@@ -33,6 +33,9 @@ class LLMClient:
         
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.google_api_key = os.getenv("GOOGLE_API_KEY")
+        
+        # Selected provider (after validation)
+        self.selected_provider: Optional[str] = None  # "openai" or "gemini"
     
     def _init_openai(self):
         """Lazy initialize OpenAI."""
@@ -74,10 +77,25 @@ class LLMClient:
             client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": "hi"}],
-                max_tokens=1
+                max_completion_tokens=10
             )
             return True
         except Exception as e:
+            # Fallback for models that don't support max_completion_tokens?
+            # Actually, standard OpenAI models support it now, but let's be safe:
+            if "Unsupported parameter" in str(e) and "max_completion_tokens" in str(e):
+                # Retry with max_tokens (legacy models)
+                try:
+                    client.chat.completions.create(
+                        model=model,
+                        messages=[{"role": "user", "content": "hi"}],
+                        max_tokens=10
+                    )
+                    return True
+                except Exception as e2:
+                    logger.warning(f"OpenAI validation failed (retry): {e2}")
+                    return False
+            
             logger.warning(f"OpenAI validation failed: {e}")
             return False
 
@@ -101,6 +119,30 @@ class LLMClient:
             logger.warning(f"Gemini validation failed: {e}")
             return False
     
+    def select_best_provider(self) -> Optional[str]:
+        """
+        Proactively check providers and lock onto the first working one.
+        Returns the name of the selected provider, or None if all fail.
+        """
+        # 1. Try OpenAI
+        if self.validate_openai():
+            self.selected_provider = "openai"
+            logger.info("Validated OpenAI API. Locking to 'openai' provider.")
+            return "openai"
+            
+        logger.warning("OpenAI validation failed or key missing.")
+        
+        # 2. Try Gemini
+        if self.validate_gemini():
+            self.selected_provider = "gemini"
+            logger.info("Validated Gemini API. Locking to 'gemini' provider.")
+            return "gemini"
+            
+        logger.warning("Gemini validation failed or key missing.")
+        
+        self.selected_provider = None
+        return None  # No working provider
+
     def chat_completion(
         self,
         model: str,
@@ -109,8 +151,19 @@ class LLMClient:
         **kwargs
     ):
         """
-        Chat completion with OpenAI primary, Gemini fallback.
+        Chat completion using the LOCKED provider (or fallback logic if not locked).
         """
+        # If locked to a provider, use it exclusively
+        if self.selected_provider == "gemini":
+            return self._gemini_fallback(model, messages, response_format, **kwargs)
+        elif self.selected_provider == "openai":
+            # Proceed with OpenAI logic below
+            pass
+        elif self.selected_provider is None:
+            # If explicit None was set (all failed), raise immediately
+            # If never initialized (legacy usage), try default failover logic
+            pass
+
         # Try OpenAI first
         client = self._init_openai()
         try:
@@ -144,6 +197,13 @@ class LLMClient:
         except Exception as e:
             logger.warning(f"OpenAI failed: {e}, trying Gemini fallback...")
             
+            # Fallback to Gemini ONLY if not locked to OpenAI
+            if self.selected_provider == "openai":
+                logger.error(f"OpenAI failed while locked: {e}")
+                raise e
+                
+            logger.warning(f"OpenAI failed: {e}, trying Gemini fallback...")
+            
             # Fallback to Gemini
             return self._gemini_fallback(model, messages, response_format, **kwargs)
     
@@ -155,8 +215,16 @@ class LLMClient:
         **kwargs
     ):
         """
-        Async chat completion with OpenAI primary, Gemini fallback.
+        Async chat completion using the LOCKED provider.
         """
+        # If locked to a provider, use it exclusively
+        if self.selected_provider == "gemini":
+            # Note: _gemini_fallback is currently synchronous, but we can wrap it or just use it (it blocks loop briefly)
+            # For true async: would need async gemini client or threadpool
+            # For now, just call it directly as it's a fallback/secondary
+            return self._gemini_fallback(model, messages, response_format, **kwargs)
+        
+        # OpenAI Logic
         client = self._init_openai_async()
         try:
             if not client:
@@ -186,6 +254,10 @@ class LLMClient:
             return response, cost
             
         except Exception as e:
+            if self.selected_provider == "openai":
+                logger.error(f"OpenAI async failed while locked: {e}")
+                raise e
+                
             logger.warning(f"OpenAI async failed: {e}, trying Gemini fallback...")
             return self._gemini_fallback(model, messages, response_format, **kwargs)
     
@@ -219,7 +291,7 @@ class LLMClient:
             # Get schema from Pydantic model
             schema = response_format.model_json_schema()
             schema_str = json.dumps(schema, indent=2)
-            prompt += f"\n\nRespond in valid JSON format matching this exact schema:\n{schema_str}\n\nIMPORTANT: Use these exact field names. Do not add markdown formatting."
+            prompt += f"\n\nRespond with a valid JSON object matching this schema:\n{schema_str}\n\nIMPORTANT: Return ONLY the JSON object with the data. Do NOT return the schema definition."
         
         # Call Gemini with new API
         response = client.models.generate_content(

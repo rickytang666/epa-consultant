@@ -4,7 +4,7 @@ import pytest
 from dotenv import load_dotenv
 
 # add backend to python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from ml.embeddings import get_embedding, get_embeddings_batch
 
@@ -17,8 +17,8 @@ def test_get_embedding():
     text = "the epa regulates pesticide use"
     embedding = get_embedding(text)
     
-    # check dimension (openai: 1536, gemini: 768)
-    assert len(embedding) in [1536, 768, 3072]
+    # check dimension (openai: 1536, gemini: 1536)
+    assert len(embedding) in [1536, 1536, 3072]
 
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY") and not os.getenv("GOOGLE_API_KEY"), reason="missing api key")
 def test_get_embeddings_batch():
@@ -31,5 +31,5 @@ def test_get_embeddings_batch():
     
     # check count and dimensions
     assert len(embeddings) == 2
-    assert len(embeddings[0]) in [1536, 768, 3072]
-    assert len(embeddings[1]) in [1536, 768, 3072]
+    assert len(embeddings[0]) in [1536, 1536, 3072]
+    assert len(embeddings[1]) in [1536, 1536, 3072]
