@@ -8,14 +8,16 @@ from deepeval.models import DeepEvalBaseLLM
 from openai import AsyncOpenAI, OpenAI
 from ml.rag_pipeline import query_rag
 
-# custom openrouter LLM for deepeval
-class OpenRouterLLM(DeepEvalBaseLLM):
-    def __init__(self, model_name="openai/gpt-oss-120b"):
+# set deepeval timeout to 10 minutes (600s) to handle slow endpoints
+os.environ["DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE"] = "600"
+
+# custom openai LLM for deepeval with prompt caching
+class OpenAILLM(DeepEvalBaseLLM):
+    def __init__(self, model_name="gpt-4o-mini"):
         self.model_name = model_name
         # deep-eval needs async generation for speed
         self.aclient = AsyncOpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.getenv("OPENROUTER_API_KEY")
+            api_key=os.getenv("OPENAI_API_KEY")
         )
 
     def load_model(self):
@@ -23,10 +25,8 @@ class OpenRouterLLM(DeepEvalBaseLLM):
 
     def generate(self, prompt: str) -> str:
         # synchronous fallback (should rarely be used by deepeval if async is avail)
-        # we create a temp sync client just for this blocking call
         client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.getenv("OPENROUTER_API_KEY")
+            api_key=os.getenv("OPENAI_API_KEY")
         )
         try:
             response = client.chat.completions.create(
@@ -52,8 +52,8 @@ class OpenRouterLLM(DeepEvalBaseLLM):
     def get_model_name(self):
         return self.model_name
 
-# init judge
-openrouter_judge = OpenRouterLLM(model_name="openai/gpt-oss-120b")
+# init judge with prompt caching enabled
+openai_judge = OpenAILLM(model_name="gpt-4o-mini")
 
 
 # load golden dataset
@@ -82,6 +82,10 @@ def test_rag_quality(item):
             for source in chunk["data"]:
                 retrieved_context.append(source.get("text", ""))
     
+    # strip debug/status prefixes and confidence scores
+    if "**Structuring answer...**" in actual_output:
+        actual_output = actual_output.split("**Structuring answer...**", 1)[1].strip()
+    
     if "**Confidence Score**" in actual_output:
         actual_output = actual_output.split("**Confidence Score**")[0].strip()
 
@@ -92,16 +96,16 @@ def test_rag_quality(item):
         retrieval_context=retrieved_context
     )
 
-    # metrics using OpenRouter
+    # metrics using OpenAI with prompt caching
     faithfulness = FaithfulnessMetric(
         threshold=0.7, 
-        model=openrouter_judge,
+        model=openai_judge,
         include_reason=True
     )
     
     relevancy = AnswerRelevancyMetric(
         threshold=0.7, 
-        model=openrouter_judge,
+        model=openai_judge,
         include_reason=True
     )
 
