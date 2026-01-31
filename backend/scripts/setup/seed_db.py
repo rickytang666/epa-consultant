@@ -5,7 +5,7 @@ import logging
 from typing import List, Dict, Any
 
 # add backend to path
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from ml.embeddings import get_embeddings_batch
 from ml.vector_store import insert_chunks

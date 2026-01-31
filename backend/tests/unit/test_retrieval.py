@@ -1,3 +1,8 @@
+import sys
+import os
+# add backend to python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 import pytest
 from unittest.mock import patch, MagicMock
 from ml.retrieval import retrieve_relevant_chunks
@@ -25,7 +30,7 @@ def test_retrieve_relevant_chunks(mock_search, mock_embedding):
     
     # check args passed to search (embedding and n_results)
     args, kwargs = mock_search.call_args
-    assert kwargs['n_results'] == 2
+    assert kwargs['n_results'] == 4 # implementation fetches 2x for fusion
     assert kwargs['query_embedding'] == [0.1] * 1536
     
     # verify output

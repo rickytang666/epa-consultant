@@ -1,4 +1,9 @@
 
+import sys
+import os
+# add backend to python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from ml.hallucination import HallucinationDetector
 import time
 

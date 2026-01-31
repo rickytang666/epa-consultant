@@ -3,7 +3,7 @@ import sys
 from dotenv import load_dotenv
 
 # add backend to path
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from ml.rag_pipeline import query_rag
 

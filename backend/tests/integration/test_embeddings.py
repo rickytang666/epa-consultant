@@ -4,7 +4,7 @@ import pytest
 from dotenv import load_dotenv
 
 # add backend to python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from ml.embeddings import get_embedding, get_embeddings_batch
 
