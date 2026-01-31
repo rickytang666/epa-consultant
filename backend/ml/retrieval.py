@@ -66,7 +66,7 @@ def reciprocal_rank_fusion(results: Dict[str, Dict[str, Any]], weights: Dict[str
     sorted_items = sorted(fused_scores.values(), key=lambda x: x["score"], reverse=True)
     return [x["item"] for x in sorted_items]
 
-def retrieve_relevant_chunks(query: str, n_results: int = 10) -> List[Dict[str, Any]]:
+async def retrieve_relevant_chunks(query: str, n_results: int = 10) -> List[Dict[str, Any]]:
     """
     retrieve relevant chunks using hybrid search (vector + bm25)
     
@@ -81,7 +81,7 @@ def retrieve_relevant_chunks(query: str, n_results: int = 10) -> List[Dict[str, 
         return []
         
     # 1. vector search
-    embedding = get_embedding(query)
+    embedding = await get_embedding(query)
     vector_results = search_chunks(query_embedding=embedding, n_results=n_results*2) # fetch more for fusion
     
     # 2. keyword search (bm25)

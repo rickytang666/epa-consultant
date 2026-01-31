@@ -46,12 +46,12 @@ def evaluate_weights(vector_weight: float, bm25_weight: float):
         # or rewrite the fusion testing locally.
         
         # Let's perform the retrieval manually to control fusion:
-        from ml.embeddings import get_embedding
+        from ml.embeddings import get_embedding_sync
         from ml.vector_store import search_chunks
         from ml.retrieval import _load_bm25_index
         
         # 1. Vector
-        embedding = get_embedding(case["query"])
+        embedding = get_embedding_sync(case["query"])
         vec_res = search_chunks(embedding, n_results=20)
         
         # 2. BM25

@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 # add backend to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from ml.embeddings import get_embeddings_batch
+from ml.embeddings import get_embeddings_batch_sync
 from ml.vector_store import insert_chunks
 from dotenv import load_dotenv
 
@@ -128,7 +128,7 @@ def seed_database():
                 
                 # generate embeddings
                 # this might take time/money, so logging is important
-                embeddings = get_embeddings_batch(texts)
+                embeddings = get_embeddings_batch_sync(texts)
                 
                 # insert
                 insert_chunks(batch_chunks, embeddings)

@@ -1,58 +1,26 @@
-"""embedding logic using openai text-embedding-3-small or google gemini"""
+"""embedding logic using unified LLM provider"""
 
 from typing import List
-import os
 import logging
-from google import genai
-from google.genai import types
-from dotenv import load_dotenv
-from openai import OpenAI
+from shared.llm_provider import LLMProvider
 
-load_dotenv()
+# Lazy initialization to avoid import-time env var requirements
+_llm_instance = None
 
-# configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
-# client initialization
-openai_client = None
-if OPENAI_API_KEY:
-    openai_client = OpenAI(api_key=OPENAI_API_KEY)
-
-google_client = None
-if GOOGLE_API_KEY:
-    google_client = genai.Client(api_key=GOOGLE_API_KEY)
-
-# models
-OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
-GEMINI_EMBEDDING_MODEL = "gemini-embedding-001"
+def _get_llm():
+    """Lazy-load LLM provider on first use."""
+    global _llm_instance
+    if _llm_instance is None:
+        _llm_instance = LLMProvider()
+    return _llm_instance
 
 # logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def _get_google_embedding(text: str) -> List[float]:
-    if not google_client:
-        raise ValueError("google_client not initialized")
-        
-    result = google_client.models.embed_content(
-        model=GEMINI_EMBEDDING_MODEL,
-        contents=text,
-        config=types.EmbedContentConfig(output_dimensionality=1536)
-    )
-    # result.embeddings is a list of embedding objects
-    return result.embeddings[0].values
-
-def _get_openai_embedding(text: str) -> List[float]:
-    if not openai_client:
-        raise ValueError("openai_client not initialized")
-        
-    return openai_client.embeddings.create(input=[text], model=OPENAI_EMBEDDING_MODEL).data[0].embedding
-
-def get_embedding(text: str) -> List[float]:
+async def get_embedding(text: str) -> List[float]:
     """
-    get embedding vector for text
-    tries openai first, fails over to google gemini
+    get embedding vector for text using unified provider
     
     args:
         text: text to embed
@@ -63,28 +31,15 @@ def get_embedding(text: str) -> List[float]:
     # cleanup newlines
     text = text.replace("\n", " ")
     
-    # try openai
-    if openai_client:
-        try:
-            return _get_openai_embedding(text)
-        except Exception as e:
-            logger.warning(f"openai embedding failed: {e}. falling back to google gemini.")
-    
-    # fallback to google
-    if google_client:
-        try:
-            logger.info("using google gemini embeddings (dim: 1536)")
-            return _get_google_embedding(text)
-        except Exception as e:
-            raise RuntimeError(f"google embedding also failed: {e}")
-            
-    raise ValueError("no working api key found for openai or google.")
+    try:
+        return await _get_llm().embed(text, use_case="embeddings")
+    except Exception as e:
+        raise RuntimeError(f"Embedding failed: {e}")
 
 
-def get_embeddings_batch(texts: List[str]) -> List[List[float]]:
+async def get_embeddings_batch(texts: List[str]) -> List[List[float]]:
     """
-    get embeddings for multiple texts
-    tries openai first, fails over to google gemini
+    get embeddings for multiple texts using unified provider
     
     args:
         texts: list of texts to embed
@@ -95,34 +50,57 @@ def get_embeddings_batch(texts: List[str]) -> List[List[float]]:
     # cleanup newlines for all texts
     texts = [t.replace("\n", " ") for t in texts]
     
-    # try openai
-    if openai_client:
-        try:
-            # OpenAI has a strict token limit (8192) per request for this model
-            # We must split the batch into smaller sub-batches
-            SUB_BATCH_SIZE = 16 
-            all_embeddings = []
-            
-            for i in range(0, len(texts), SUB_BATCH_SIZE):
-                sub_batch = texts[i:i + SUB_BATCH_SIZE]
-                response = openai_client.embeddings.create(input=sub_batch, model=OPENAI_EMBEDDING_MODEL)
-                all_embeddings.extend([data.embedding for data in response.data])
-                
-            return all_embeddings
-        except Exception as e:
-            logger.warning(f"openai batch embedding failed: {e}. falling back to google gemini.")
+    try:
+        return await _get_llm().embed(texts, use_case="embeddings")
+    except Exception as e:
+        raise RuntimeError(f"Batch embedding failed: {e}")
 
-    # fallback to google
-    if google_client:
-        try:
-            logger.info("using google gemini batch embeddings (dim: 1536)")
-            result = google_client.models.embed_content(
-                model=GEMINI_EMBEDDING_MODEL,
-                contents=texts,
-                config=types.EmbedContentConfig(output_dimensionality=1536)
-            )
-            return [e.values for e in result.embeddings]
-        except Exception as e:
-             raise RuntimeError(f"google batch embedding also failed: {e}")
 
-    raise ValueError("no working api key found for openai or google.")
+# Sync wrappers for backward compatibility
+def get_embedding_sync(text: str) -> List[float]:
+    """Synchronous wrapper for get_embedding. Use async version when possible."""
+    import asyncio
+    import threading
+    
+    result = None
+    exception = None
+    
+    def run_in_thread():
+        nonlocal result, exception
+        try:
+            result = asyncio.run(get_embedding(text))
+        except Exception as e:
+            exception = e
+    
+    thread = threading.Thread(target=run_in_thread)
+    thread.start()
+    thread.join()
+    
+    if exception:
+        raise exception
+    return result
+
+
+def get_embeddings_batch_sync(texts: List[float]) -> List[List[float]]:
+    """Synchronous wrapper for get_embeddings_batch. Use async version when possible."""
+    import asyncio
+    import threading
+    
+    result = None
+    exception = None
+    
+    def run_in_thread():
+        nonlocal result, exception
+        try:
+            result = asyncio.run(get_embeddings_batch(texts))
+        except Exception as e:
+            exception = e
+    
+    thread = threading.Thread(target=run_in_thread)
+    thread.start()
+    thread.join()
+    
+    if exception:
+        raise exception
+    return result
+
