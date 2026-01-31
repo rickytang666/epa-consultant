@@ -43,7 +43,7 @@ class LLMProvider:
         ],
         "rag_generation": [
             ("openrouter", "openai/gpt-oss-120b"),
-            ("openai", "gpt-4o-mini"),
+            ("openai", "gpt-5-nano"),
             ("google", "gemini-2.5-flash")
         ],
         "embeddings": [
