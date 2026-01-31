@@ -36,24 +36,16 @@ def main():
     if needs_llm:
         print("Checking API availability and quota...")
         llm = LLMClient()
-        openai_ok = llm.validate_openai()
-        google_ok = llm.validate_gemini()
+        provider = llm.select_best_provider()
         
-        if not openai_ok and not google_ok:
-            print(f"\n{BOLD}{RED}WARNING: API keys are invalid or quota exhausted!{RESET}")
-            print(f"{RED}Summaries and header correction require a working LLM.{RESET}")
+        if not provider:
+            print(f"\n{BOLD}{RED}WARNING: All API keys are invalid or quota exhausted!{RESET}")
+            print(f"{RED}Summaries and header correction cannot proceed.{RESET}")
             print(f"{RED}REVERTING TO SKIP-SUMMARIES MODE.{RESET}\n")
             args.skip_summaries = True
             args.fix_headers = False
-        elif not openai_ok or not google_ok:
-            print(f"\n{BOLD}{RED}NOTE: One API provider is unavailable (Redundancy Limited){RESET}")
-            if not openai_ok:
-                print(f"{RED}  - OpenAI is unavailable (invalid key or quota hit). Using Gemini fallback.{RESET}")
-            if not google_ok:
-                print(f"{RED}  - Gemini is unavailable (invalid key or quota hit). No fallback if OpenAI fails.{RESET}")
-            print()
         else:
-            print(f"✓ All API systems operational.\n")
+            print(f"✓ Using {BOLD}{provider.upper()}{RESET} for all operations.\n")
 
     extracted_dir = os.path.abspath("data/extracted")
     processed_dir = os.path.abspath("data/processed")
@@ -104,21 +96,29 @@ def main():
             
             # Generate summaries by default
             if not args.skip_summaries:
-                print("Generating skeleton summaries...")
-                summaries, sum_cost = ingestor.generate_skeleton_summaries_sync(doc.chunks)
-                # Stringify tuple keys for JSON serialization
-                doc.section_summaries = {
-                    " > ".join([h[1] for h in k]) if k else "Root": v 
-                    for k, v in summaries.items()
-                }
-                
-                print("Generating document summary...")
-                doc_summary, doc_cost = ingestor.generate_document_summary(summaries, original_filename)
-                doc.document_summary = doc_summary
-                
-                doc.costs["skeleton_summaries"] = sum_cost
-                doc.costs["document_summary"] = doc_cost
-                doc.costs["total"] = doc.costs.get("header_correction", 0.0) + sum_cost + doc_cost
+                try:
+                    print("Generating skeleton summaries...")
+                    summaries, sum_cost = ingestor.generate_skeleton_summaries_sync(doc.chunks)
+                    # Stringify tuple keys for JSON serialization
+                    doc.section_summaries = {
+                        " > ".join([h[1] for h in k]) if k else "Root": v 
+                        for k, v in summaries.items()
+                    }
+                    
+                    print("Generating document summary...")
+                    doc_summary, doc_cost = ingestor.generate_document_summary(summaries, original_filename)
+                    doc.document_summary = doc_summary
+                    
+                    doc.costs["skeleton_summaries"] = sum_cost
+                    doc.costs["document_summary"] = doc_cost
+                    doc.costs["total"] = doc.costs.get("header_correction", 0.0) + sum_cost + doc_cost
+                    
+                except Exception as e:
+                    print(f"{BOLD}{RED}WARNING: Summary generation failed (likely quota/network). Skipping summaries.{RESET}")
+                    print(f"{RED}Error details: {e}{RESET}")
+                    # Continue without summaries
+                    doc.section_summaries = {}
+                    doc.document_summary = ""
             
             # Save output as separate files
             
