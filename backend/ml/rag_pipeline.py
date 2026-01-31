@@ -375,7 +375,7 @@ def query_rag(query: str, chat_history: list[dict[str, str]] = None, top_k: int 
                 # optional: run programmatic verification
                 verification_score = 0.0
                 try:
-                    verifier = HallucinationDetector() # this will download model on first run (might be slow 1st time)
+                    verifier = HallucinationDetector.get_instance() # this uses the singleton instance
                     verification_score = verifier.compute_score(context_text, initial_answer)
                 except Exception as e:
                     print(f"verifier error: {e}")

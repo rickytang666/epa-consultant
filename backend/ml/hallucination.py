@@ -2,11 +2,21 @@
 
 from sentence_transformers import CrossEncoder
 
+# global singleton
+_DETECTOR_INSTANCE = None
+
 class HallucinationDetector:
     def __init__(self, model_name="cross-encoder/ms-marco-MiniLM-L-6-v2"):
         # this model is trained to score (query, passage) relevance
         # we repurpose it to score (answer, context) support
         self.model = CrossEncoder(model_name)
+    
+    @classmethod
+    def get_instance(cls):
+        global _DETECTOR_INSTANCE
+        if _DETECTOR_INSTANCE is None:
+            _DETECTOR_INSTANCE = cls()
+        return _DETECTOR_INSTANCE
         
     def compute_score(self, context: str, answer: str) -> float:
         """

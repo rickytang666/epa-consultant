@@ -10,7 +10,7 @@ import time
 def test_hallucination_detection():
     print("Initializing detector (may download model)...")
     start = time.time()
-    detector = HallucinationDetector()
+    detector = HallucinationDetector.get_instance()
     print(f"Initialization took {time.time() - start:.2f}s")
     
     # case 1: clear entailment
