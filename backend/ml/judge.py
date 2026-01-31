@@ -20,7 +20,7 @@ class EvaluationResult(BaseModel):
 class JudgeAgent:
     def __init__(self, client: Optional[OpenAI] = None):
         self.client = client
-        self.model = "openai/gpt-oss-120b" 
+        self.model = "gpt-4o-mini" 
 
     def evaluate_answer(self, query: str, context: str, answer: str) -> Dict[str, Any]:
         """
