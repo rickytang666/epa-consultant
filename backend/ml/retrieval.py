@@ -114,9 +114,10 @@ def retrieve_relevant_chunks(query: str, n_results: int = 10) -> List[Dict[str, 
                 keyword_results[-1]["metadata"] = c_meta
 
     # 3. fusion
+    # TODO: tune weights
     fused_results = reciprocal_rank_fusion({
         "vector": vector_results,
         "bm25": keyword_results
-    }, weights={"vector": 3.0, "bm25": 1.0})
+    }, weights={"vector": 1.0, "bm25": 1.0})
     
     return fused_results[:n_results]
