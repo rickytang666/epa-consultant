@@ -39,7 +39,7 @@ class LLMProvider:
         "query_enrichment": [
             ("openrouter", "meta-llama/llama-3-8b-instruct"),
             ("openai", "gpt-5-nano"),
-            ("google", "gemini-2.0-flash")
+            ("google", "gemini-2.0-flash-lite")
         ],
         "rag_generation": [
             ("openrouter", "openai/gpt-oss-120b"),
@@ -54,6 +54,11 @@ class LLMProvider:
             ("openrouter", "qwen/qwen-turbo"),
             ("openai", "openai/gpt-4.1-nano"),
             ("google", "gemini-2.0-flash-lite")
+        ],
+        "router": [
+            ("openrouter", "meta-llama/llama-3-8b-instruct"),
+            ("openai", "gpt-5-nano"),
+            ("google", "gemini-2.0-flash-lite"),
         ]
     }
     

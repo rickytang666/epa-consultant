@@ -14,25 +14,46 @@ def _get_llm():
         _llm_instance = LLMProvider()
     return _llm_instance
 
-async def query_rag(query: str) -> AsyncGenerator[dict[str, Any], None]:
+async def query_rag(query: str, chat_history: list[dict[str, str]] = None, top_k: int = 10) -> AsyncGenerator[dict[str, Any], None]:
     """
-    answer a query using rag
-    
-    args:
-        query: user question
-        top_k: number of chunks to retrieve (default 3)
-        
-    yields:
-        chunks of the answer (streaming)
+    answer a query using rag with intent routing and memory
     """
     if not query:
         yield {"type": "content", "delta": ""}
         return
 
-    print("query:", query)
-    # 1. retrieve context
-    # optimize: reduce k to 3 for speed/cost, usually sufficient for RAG
-    chunks = await retrieve_relevant_chunks(query, n_results=3)
+    # 1. router: usage cheap model to classify intent
+    # bypass rag for chitchat/greetings
+    intent = await classify_intent(query)
+    
+    if intent == "supplemental":
+        yield {"type": "content", "delta": ""} # init stream
+        try:
+            stream = await _get_llm().chat_completion(
+                messages=[
+                    {"role": "system", "content": "You are a helpful EPA Consultant assistant. Respond politely to the user's greeting or comment. Be concise."},
+                    {"role": "user", "content": query}
+                ],
+                use_case="router",
+                stream=True
+            )
+            async for chunk in stream:
+                content = chunk.choices[0].delta.content if chunk.choices[0].delta.content else ""
+                if content:
+                    yield {"type": "content", "delta": content}
+            return
+        except Exception as e:
+            yield {"type": "content", "delta": "Hello! How can I help you with EPA regulations today?"}
+            return
+
+    # 2. contextualize
+    # rewrite query if history exists
+    search_query = query
+    if chat_history:
+        search_query = await _generate_standalone_query(query, chat_history)
+
+    # 3. retrieve context
+    chunks = await retrieve_relevant_chunks(search_query, n_results=top_k)
     
     # optimize: truncate duplicate or massive chunks to avoid token limit errors
     # average chunk is ~800 chars, but outliers can be 30k+
@@ -46,13 +67,13 @@ async def query_rag(query: str) -> AsyncGenerator[dict[str, Any], None]:
             c_copy["text"] = c_copy["text"][:MAX_CHUNK_CHARS] + "... [truncated]"
         truncated_chunks.append(c_copy)
 
-    # 2. Yield Sources Event immediately
+    # 4. Yield Sources Event immediately
     yield {
         "type": "sources",
         "data": chunks  # List of dicts with file, page, text, etc.
     }
 
-    # 3. construct prompt
+    # 5. construct prompt
     # extract document summary from first chunk if available
     doc_summary = ""
     for c in chunks:
@@ -123,6 +144,28 @@ async def query_rag(query: str) -> AsyncGenerator[dict[str, Any], None]:
             "delta": f"Error generating response: {e}"
         }
 
+
+async def classify_intent(query: str) -> str:
+    """
+    Classify query intent: "supplemental" (chitchat) or "core" (needs rag)
+    """
+    messages = [
+        {"role": "system", "content": "You are a query router. Classify the user query as either 'supplemental' (greetings, chitchat, compliments, generic pleasantries) or 'core' (needs information retrieval about EPA, permits, regulations). Return ONLY the label 'supplemental' or 'core'."},
+        {"role": "user", "content": query}
+    ]
+    try:
+        response = await _get_llm().chat_completion(
+            messages=messages,
+            use_case="router",
+            stream=False,
+            max_tokens=10,
+            temperature=0.0
+        )
+        content = response.get("content", "").strip().lower()
+        return "supplemental" if "supplemental" in content else "core"
+    except Exception as e:
+        print(f"Router failed: {e}")
+        return "core" # fallback to safe option
 
 
 async def _generate_standalone_query(query: str, chat_history: list[dict[str, str]]) -> str:
