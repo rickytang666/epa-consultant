@@ -10,7 +10,7 @@ from ml.rag_pipeline import query_rag
 
 # custom openrouter LLM for deepeval
 class OpenRouterLLM(DeepEvalBaseLLM):
-    def __init__(self, model_name="openai/gpt-5-nano"):
+    def __init__(self, model_name="openai/gpt-oss-120b"):
         self.model_name = model_name
         # deep-eval needs async generation for speed
         self.aclient = AsyncOpenAI(
@@ -53,7 +53,7 @@ class OpenRouterLLM(DeepEvalBaseLLM):
         return self.model_name
 
 # init judge
-openrouter_judge = OpenRouterLLM(model_name="openai/gpt-5-nano")
+openrouter_judge = OpenRouterLLM(model_name="openai/gpt-oss-120b")
 
 
 # load golden dataset
@@ -70,7 +70,7 @@ def test_rag_quality(item):
     expected_output = item["expected_output"]
     
     # run pipeline
-    pipeline_generator = query_rag(input_text, top_k=3)
+    pipeline_generator = query_rag(input_text)
     
     actual_output = ""
     retrieved_context = []
