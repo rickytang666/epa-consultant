@@ -7,6 +7,7 @@ from google import genai
 from google import genai
 from ml.retrieval import retrieve_relevant_chunks
 from ml.judge import JudgeAgent
+from ml.hallucination import HallucinationDetector
 
 # config
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -371,9 +372,17 @@ def query_rag(query: str, chat_history: list[dict[str, str]] = None, top_k: int 
                     
             # append confidence score if available
             if initial_answer and evaluation:
-                 yield {
+                # optional: run programmatic verification
+                verification_score = 0.0
+                try:
+                    verifier = HallucinationDetector() # this will download model on first run (might be slow 1st time)
+                    verification_score = verifier.compute_score(context_text, initial_answer)
+                except Exception as e:
+                    print(f"verifier error: {e}")
+
+                yield {
                     "type": "content", 
-                    "delta": f"\n\n---\n**Confidence Score**: {evaluation['score']:.2f}/1.0"
+                    "delta": f"\n\n---\n**Confidence Score**: {evaluation['score']:.2f}/1.0\n**Fact Check Score**: {verification_score:.2f}/1.0"
                 }
 
             return
