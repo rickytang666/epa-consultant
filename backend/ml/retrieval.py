@@ -122,4 +122,29 @@ async def retrieve_relevant_chunks(query: str, n_results: int = 10) -> List[Dict
         "bm25": keyword_results
     }, weights={"vector": 1.0, "bm25": 1.0})
     
-    return fused_results[:n_results]
+    # 4. Repair formatting (heuristic for broken tables)
+    final_results = fused_results[:n_results]
+    for res in final_results:
+        if "text" in res and res["text"]:
+            res["text"] = _repair_table_formatting(res["text"])
+            
+    return final_results
+
+def _repair_table_formatting(text: str) -> str:
+    """
+    heuristic to fix common markdown table issues (flattened rows)
+    e.g. '| header ||---|' -> '| header |\n|---|'
+    """
+    import re
+    # 1. safe fix: header/separator join (always fix)
+    # matches '|' then '|---' or '|:'
+    text = re.sub(r'(\|\s*)(\|[-:]+)', r'\1\n\2', text)
+    
+    # 2. aggressive fix: row/row join
+    # only apply if text looks like a flattened table (long but few newlines)
+    if len(text) > 200 and text.count('\n') < 3:
+        # replace || with |\n|
+        # assumes valid empty cells | | are spaced, or rare in this specific flattened context
+        text = text.replace("||", "|\n|")
+        
+    return text
