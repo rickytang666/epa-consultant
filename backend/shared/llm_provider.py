@@ -38,22 +38,22 @@ class LLMProvider:
     FALLBACK_CHAINS = {
         "query_enrichment": [
             ("openrouter", "meta-llama/llama-3-8b-instruct"),
-            ("openai", "gpt-4o-mini"),
+            ("openai", "gpt-5-nano"),
             ("google", "gemini-2.0-flash")
         ],
         "rag_generation": [
             ("openrouter", "openai/gpt-oss-120b"),
             ("openai", "gpt-4o-mini"),
-            ("google", "gemini-2.0-flash")
+            ("google", "gemini-2.5-flash")
         ],
         "embeddings": [
             ("openai", "text-embedding-3-small"),
             ("google", "text-embedding-004")
         ],
         "summarization": [
-            ("openai", "gpt-5-mini"),
-            ("openrouter", "meta-llama/llama-3-8b-instruct"),
-            ("google", "gemini-2.5-flash-lite")
+            ("openrouter", "qwen/qwen-turbo"),
+            ("openai", "openai/gpt-4.1-nano"),
+            ("google", "gemini-2.0-flash-lite")
         ]
     }
     
