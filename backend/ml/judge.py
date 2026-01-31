@@ -12,8 +12,7 @@ COMPLETENESS = "completeness"
 class JudgeAgent:
     def __init__(self, client: Optional[OpenAI] = None):
         self.client = client
-        # default to cheap/fast model for judging
-        self.model = "openai/gpt-4o-mini" 
+        self.model = "openai/gpt-oss-120b" 
 
     def evaluate_answer(self, query: str, context: str, answer: str) -> Dict[str, Any]:
         """
