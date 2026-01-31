@@ -256,6 +256,8 @@ def query_rag(query: str, chat_history: list[dict[str, str]] = None, top_k: int 
         "Use the provided context to answer the user's question. "
         "Your answers must be grounded in the context. "
         "When referencing specific rules or sections, cite the source using the format [Source: Header > Path]. "
+        "CRITICAL: Pay close attention to exceptions, conditions, and qualifiers (e.g., 'unless', 'except', 'provided that'). "
+        "If a rule has exceptions, explicitly state them. Do not give a flat 'Yes' or 'No' if the answer is conditional. "
         "If the answer is not in the context, say you don't know.\n\n"
     )
     
