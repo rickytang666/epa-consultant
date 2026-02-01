@@ -6,7 +6,7 @@ from deepeval.test_case import LLMTestCase
 from deepeval.metrics import FaithfulnessMetric, AnswerRelevancyMetric
 from deepeval.models import DeepEvalBaseLLM
 from openai import AsyncOpenAI, OpenAI
-from ml.rag_pipeline import query_rag
+from ml.rag_pipeline import query_rag_sync
 
 # set deepeval timeout to 10 minutes (600s) to handle slow endpoints
 os.environ["DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE"] = "600"
@@ -70,7 +70,7 @@ def test_rag_quality(item):
     expected_output = item["expected_output"]
     
     # run pipeline
-    pipeline_generator = query_rag(input_text)
+    pipeline_generator = query_rag_sync(input_text)
     
     actual_output = ""
     retrieved_context = []

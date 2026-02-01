@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 # add backend to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from ml.rag_pipeline import query_rag
+from ml.rag_pipeline import query_rag_sync
 
 def test_top_k():
     load_dotenv()
@@ -29,7 +29,7 @@ def test_top_k():
             sources = []
             
             try:
-                for event in query_rag(q, top_k=k):
+                for event in query_rag_sync(q, top_k=k):
                     if event["type"] == "content":
                         # suppress generation output for cleaner debugging
                         pass 
