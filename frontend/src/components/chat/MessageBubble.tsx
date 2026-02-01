@@ -32,14 +32,14 @@ export interface MessageBubbleProps
 
 export function MessageBubble({ role, content, onCitationClick, className, ...props }: MessageBubbleProps) {
     // Pre-process content to turn [Source: ...] into a link we can intercept
-    // Regex: Match [Source: <text>]
+    // Regex: Match [Source: <text>] or [source: <text>]
     // Replace with: [Source: <text>](#citation:<text>)
     // Regex matches:
-    // 1. [Source: ...]
-    // 2. 【Source: ...】
-    // 3. (Source: ...)
+    // 1. [Source: ...] or [source: ...]
+    // 2. 【Source: ...】 or 【source: ...】
+    // 3. (Source: ...) or (source: ...)
     const processedContent = content.replace(
-        /(?:\[|【|\()Source:\s*(.*?)(?:\]|】|\))/g,
+        /(?:\[|【|\()[Ss]ource:\s*(.*?)(?:\]|】|\))/g,
         (_, capture) => `[Source: ${capture}](#citation:${encodeURIComponent(capture)})`
     );
 
