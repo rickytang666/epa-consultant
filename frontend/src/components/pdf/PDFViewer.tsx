@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import type { Citation } from '../../types';
 import { Slider } from '@/components/ui/slider';
@@ -13,11 +13,12 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 interface PDFViewerProps {
-    fileUrl?: string; // We might need to fetch the blob or just use a static test file for now
+    fileUrl?: string;
     citations: Citation[];
+    activeCitation?: string | null;
 }
 
-export function PDFViewer({ fileUrl, citations }: PDFViewerProps) {
+export function PDFViewer({ fileUrl, citations, activeCitation }: PDFViewerProps) {
     // Zoom State: Percentage (Default 100% = 700px)
     const [scalePercent, setScalePercent] = useState<number>(100);
 
@@ -28,41 +29,102 @@ export function PDFViewer({ fileUrl, citations }: PDFViewerProps) {
         return Array.from(new Set(pages)).sort((a, b) => a - b);
     }, [citations]);
 
+    // Scroll to Active Citation Logic
+    useEffect(() => {
+        if (!activeCitation) return;
+        console.log("[PDFViewer] Active Citation:", activeCitation);
+        console.log("[PDFViewer] Citations:", citations);
+        // Find the page number for this citation
+        // We look for a source where the text matches activeCitation (which is the header path)
+        // Correction: The backend sends [Source: Header > Path]. 
+        // We need to match this against the citation's text or metadata? 
+        // The `Citation` type has `text` (chunk text) and metadata.
+        // It doesn't seem to store `header_path_str` in the top level `Citation` object in `types.ts`?
+        // Checking `types.ts`... I recall `text`, `page`, `docId`. 
+        // I might need to update `Citation` type to include `headerPath`.
+
+        // Let's assume for now I will fix types.ts next. 
+        // Fuzzy Matching Logic:
+        // We check if the activeCitation (from LLM) is contained in the backend Header Path, or vice-versa.
+        // Also check if it matches the text content directly (fallback).
+        const match = citations.find(c => {
+            // Normalize strings to handle non-breaking spaces and other artifacts
+            const normalize = (str: string) => str.replace(/\s+/g, ' ').trim();
+
+            const header = normalize(c.headerPath || "");
+            const text = normalize(c.text || "");
+            const needle = normalize(activeCitation);
+
+            console.log("[PDFViewer] Header (Norm):", header);
+            console.log("[PDFViewer] Needle (Norm):", needle);
+
+            // Last Section Logic:
+            // Extract the last part of the needle. If that fails, check the part before it.
+            // Split by either '>' or '→', trim parts, filter empty
+            const parts = needle.split(/[>→]/).map(p => p.trim()).filter(p => p);
+
+            const lastPart = parts.length > 0 ? parts[parts.length - 1] : "";
+            const secondLastPart = parts.length > 1 ? parts[parts.length - 2] : "";
+
+            console.log("[PDFViewer] Parts:", parts);
+
+            const isMatch = (
+                header === needle ||
+                header.includes(needle) ||
+                (lastPart && header.includes(lastPart)) ||
+                (secondLastPart && header.includes(secondLastPart)) ||
+                text.includes(needle)
+            );
+            return isMatch;
+        });
+
+        console.log("[PDFViewer] Matched Citation:", match);
+        const targetPage = match?.page;
+        console.log("[PDFViewer] Target Page:", targetPage);
+
+        if (targetPage) {
+            const pageElement = document.getElementById(`pdf-page-${targetPage}`);
+            console.log("[PDFViewer] Page Element found:", !!pageElement);
+            if (pageElement) {
+                pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        } else if (match && !targetPage) {
+            // Match found but no page -> Text Only Source
+            console.log("[PDFViewer] Jumping to Text Only sources");
+            const unmappedElement = document.getElementById("unmapped-sources");
+            if (unmappedElement) {
+                unmappedElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        } else {
+            console.warn("[PDFViewer] No matching page found for citation or page is undefined.");
+        }
+    }, [activeCitation, citations]);
+
     function onDocumentLoadSuccess() {
         // Placeholder for future use
     }
 
-    // Highlighting Logic: Custom Text Renderer
+    // ... existing Custom Text Renderer ...
     function makeTextRenderer(pageNumber: number) {
         return (textItem: any) => {
             const str = textItem.str;
-
-            // Find if this string matches any citation text for this page
             const relevantCitations = citations.filter(c => c.page === pageNumber);
 
-            // Check if ANY source text contains this string (or vice versa)
-            // We use a loose match to handle fragmentation:
-            // 1. source.includes(str) -> The text item is part of the source (e.g. "Agency" in "EPA Agency")
-            // 2. str.includes(source) -> The text item contains the source (e.g. "The EPA Agency" contains "EPA")
             const isMatch = relevantCitations.some(c =>
                 c.text.includes(str) || (str.length > 5 && str.includes(c.text))
             );
 
             if (isMatch) {
-                // Return highlighted markup
                 return `<mark class="bg-yellow-200 text-black rounded-sm px-0.5">${str}</mark>`;
             }
-
             return str;
         };
     }
 
-    // Fallback if no file
     if (!fileUrl) {
         return <div className="p-4 text-center text-muted-foreground">No PDF loaded.</div>;
     }
 
-    // Calculate dynamic width based on scale (Base 700px)
     const currentWidth = 700 * (scalePercent / 100);
 
     return (
@@ -89,9 +151,14 @@ export function PDFViewer({ fileUrl, citations }: PDFViewerProps) {
                 >
                     {relevantPages.length > 0 ? (
                         relevantPages.map(pageNum => (
-                            <div key={pageNum} className="relative shadow-md border-2 border-yellow-400 bg-white transition-all duration-200" style={{ width: currentWidth }}>
+                            <div
+                                key={pageNum}
+                                id={`pdf-page-${pageNum}`}
+                                className="relative shadow-md bg-white transition-all duration-200"
+                                style={{ width: currentWidth }}
+                            >
                                 {/* Badge */}
-                                <div className="absolute top-2 right-2 z-10 bg-yellow-400 px-2 py-1 text-xs font-bold rounded text-black shadow-sm">
+                                <div className="absolute top-2 right-2 z-10 bg-yellow-400 px-2 py-1 text-xs font-bold rounded text-white shadow-sm">
                                     Page {pageNum} (Relevant)
                                 </div>
                                 <Page
@@ -109,6 +176,23 @@ export function PDFViewer({ fileUrl, citations }: PDFViewerProps) {
                         </div>
                     )}
                 </Document>
+
+                {/* Unmapped Sources (No Page Number) */}
+                {citations.filter(c => !c.page).length > 0 && (
+                    <div id="unmapped-sources" className="mt-8 border-t pt-4">
+                        <h4 className="mb-2 font-semibold text-gray-700 px-4">Other Sources (Text Only)</h4>
+                        <div className="space-y-4 px-4 pb-8">
+                            {citations.filter(c => !c.page).map((c, i) => (
+                                <div key={i} className="rounded-lg border bg-white p-4 shadow-sm">
+                                    <div className="mb-1 text-xs font-bold text-muted-foreground">
+                                        {c.headerPath || "Unknown Source"}
+                                    </div>
+                                    <p className="text-sm text-gray-800">{c.text}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

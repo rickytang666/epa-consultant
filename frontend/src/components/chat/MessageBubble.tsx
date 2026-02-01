@@ -1,5 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import Markdown from 'react-markdown';
+import remarkBreaks from 'remark-breaks';
+import remarkGfm from 'remark-gfm';
 import { cn } from "@/lib/utils";
 import { User, Bot } from 'lucide-react';
 
@@ -18,14 +20,29 @@ const bubbleVariants = cva(
     }
 );
 
+import { CitationBadge } from "@/components/chat/CitationBadge";
+
 export interface MessageBubbleProps
     extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof bubbleVariants> {
     content: string;
     role: "user" | "assistant";
+    onCitationClick?: (citationKey: string) => void;
 }
 
-export function MessageBubble({ role, content, className, ...props }: MessageBubbleProps) {
+export function MessageBubble({ role, content, onCitationClick, className, ...props }: MessageBubbleProps) {
+    // Pre-process content to turn [Source: ...] into a link we can intercept
+    // Regex: Match [Source: <text>]
+    // Replace with: [Source: <text>](#citation:<text>)
+    // Regex matches:
+    // 1. [Source: ...]
+    // 2. 【Source: ...】
+    // 3. (Source: ...)
+    const processedContent = content.replace(
+        /(?:\[|【|\()Source:\s*(.*?)(?:\]|】|\))/g,
+        (_, capture) => `[Source: ${capture}](#citation:${encodeURIComponent(capture)})`
+    );
+
     return (
         <div className={cn("flex items-start gap-3", role === "user" ? "justify-end" : "justify-start", "mb-4")}>
             {role === "assistant" && (
@@ -35,8 +52,27 @@ export function MessageBubble({ role, content, className, ...props }: MessageBub
             )}
 
             <div className={cn(bubbleVariants({ role }), "prose dark:prose-invert prose-sm max-w-none break-words", className)} {...props}>
-                <Markdown>
-                    {content}
+                <Markdown
+                    remarkPlugins={[remarkBreaks, remarkGfm]}
+                    components={{
+                        a: ({ href, children, ...props }) => {
+                            if (href?.startsWith('#citation:')) {
+                                const rawKey = href.replace('#citation:', '');
+                                const citationKey = decodeURIComponent(rawKey);
+                                // If role is user, we shouldn't really have citations, but handle safely
+                                return (
+                                    <CitationBadge
+                                        citationKey={citationKey}
+                                        onClick={() => onCitationClick?.(citationKey)}
+                                        className="no-underline align-middle"
+                                    />
+                                );
+                            }
+                            return <a href={href} {...props}>{children}</a>;
+                        }
+                    }}
+                >
+                    {processedContent}
                 </Markdown>
             </div>
 

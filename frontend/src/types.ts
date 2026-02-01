@@ -23,4 +23,5 @@ export interface Citation {
     text: string;
     page: number;
     docId: string;
+    headerPath?: string;
 }

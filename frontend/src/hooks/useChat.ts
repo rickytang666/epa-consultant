@@ -42,7 +42,7 @@ export function useChat() {
                 buffer += chunk;
 
                 // Split by newline
-                const lines = buffer.split('\n');
+                const lines = buffer.split('\n\n');
 
                 // Keep the last part in buffer (it might be incomplete)
                 buffer = lines.pop() || "";
@@ -51,18 +51,23 @@ export function useChat() {
                     const trimmedLine = line.trim();
                     if (trimmedLine.startsWith('content: ')) {
                         // Extract content payload
-                        const text = trimmedLine.slice(9); // remove "content: "
-                        assistantMessage += text;
+                        const jsonStr = trimmedLine.slice(9); // remove "content: "
+                        try {
+                            const text = JSON.parse(jsonStr);
+                            assistantMessage += text;
 
-                        // Update the last message (assistant) with new token
-                        setMessages(prev => {
-                            const newHistory = [...prev];
-                            const lastMsg = newHistory[newHistory.length - 1];
-                            if (lastMsg.role === 'assistant') {
-                                lastMsg.content = assistantMessage;
-                            }
-                            return newHistory;
-                        });
+                            // Update the last message (assistant) with new token
+                            setMessages(prev => {
+                                const newHistory = [...prev];
+                                const lastMsg = newHistory[newHistory.length - 1];
+                                if (lastMsg.role === 'assistant') {
+                                    lastMsg.content = assistantMessage;
+                                }
+                                return newHistory;
+                            });
+                        } catch (e) {
+                            console.error("Failed to parse content:", e);
+                        }
                     } else if (trimmedLine.startsWith('sources: ')) {
                         // Extract and parse sources payload
                         try {
@@ -73,7 +78,8 @@ export function useChat() {
                                 id: s.chunk_id,
                                 text: s.text,
                                 page: s.metadata.page_number,
-                                docId: s.metadata.document_id
+                                docId: s.metadata.document_id,
+                                headerPath: s.metadata.header_path_str
                             }));
 
                             setSources(citations);

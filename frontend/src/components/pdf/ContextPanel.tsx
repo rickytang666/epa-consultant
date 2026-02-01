@@ -6,9 +6,10 @@ import type { Citation } from "@/types";
 interface ContextPanelProps {
     sources: Citation[];
     onClose: () => void;
+    activeCitation?: string | null;
 }
 
-export function ContextPanel({ sources, onClose }: ContextPanelProps) {
+export function ContextPanel({ sources, onClose, activeCitation }: ContextPanelProps) {
     // For now, hardcode a sample PDF or use one if we have a real URL from sources?
     // Since we are running locally, we might need a test pdf in public/
     // Let's use a dummy online PDF or a local one if the user provided it.
@@ -25,7 +26,7 @@ export function ContextPanel({ sources, onClose }: ContextPanelProps) {
                 </Button>
             </header>
             <div className="flex-1 overflow-hidden">
-                <PDFViewer citations={sources} fileUrl={fileUrl} />
+                <PDFViewer citations={sources} fileUrl={fileUrl} activeCitation={activeCitation} />
             </div>
         </div>
     );

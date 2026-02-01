@@ -10,9 +10,10 @@ interface ChatLayoutProps {
     isLoading: boolean;
     onToggleContext: () => void;
     isContextOpen: boolean;
+    onCitationClick: (citationKey: string) => void;
 }
 
-export function ChatLayout({ messages, sendMessage, isLoading, onToggleContext, isContextOpen }: ChatLayoutProps) {
+export function ChatLayout({ messages, sendMessage, isLoading, onToggleContext, isContextOpen, onCitationClick }: ChatLayoutProps) {
 
 
     return (
@@ -32,7 +33,7 @@ export function ChatLayout({ messages, sendMessage, isLoading, onToggleContext, 
                 </div>
             </header>
             <div className="flex-1 bg-background flex flex-col overflow-hidden">
-                <ChatList messages={messages} />
+                <ChatList messages={messages} onCitationClick={onCitationClick} />
                 <ChatInput onSend={sendMessage} isLoading={isLoading} />
             </div>
         </div>

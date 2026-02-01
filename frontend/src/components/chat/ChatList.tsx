@@ -8,9 +8,10 @@ interface Message {
 
 interface ChatListProps {
     messages: Message[];
+    onCitationClick: (citationKey: string) => void;
 }
 
-export function ChatList({ messages }: ChatListProps) {
+export function ChatList({ messages, onCitationClick }: ChatListProps) {
     const { scrollRef, onScroll } = useChatScroll(messages);
 
     return (
@@ -25,6 +26,7 @@ export function ChatList({ messages }: ChatListProps) {
                     key={i}
                     role={msg.role}
                     content={msg.content}
+                    onCitationClick={onCitationClick}
                 />
             ))}
         </div>

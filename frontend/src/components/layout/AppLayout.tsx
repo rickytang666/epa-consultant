@@ -15,15 +15,20 @@ interface AppLayoutProps {
 export function AppLayout({ defaultLayout: _defaultLayout = [20, 50, 30] }: AppLayoutProps) {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isContextOpen, setIsContextOpen] = useState(false);
+    const [activeCitation, setActiveCitation] = useState<string | null>(null);
     const sidebarRef = useRef<PanelImperativeHandle>(null);
 
     const { messages, sendMessage, isLoading, sources } = useChat();
 
     // Auto-open context panel when sources arrive
-    // Auto-open context panel when sources arrive
     useEffect(() => {
         if (sources.length > 0) setIsContextOpen(true);
     }, [sources]);
+
+    const handleCitationClick = (citationKey: string) => {
+        setIsContextOpen(true);
+        setActiveCitation(citationKey);
+    };
 
     return (
         <TooltipProvider delayDuration={0}>
@@ -58,13 +63,14 @@ export function AppLayout({ defaultLayout: _defaultLayout = [20, 50, 30] }: AppL
                 <ResizableHandle withHandle />
 
                 {/* MIDDLE: Chat */}
-                <ResizablePanel defaultSize="40" minSize="30" className="h-full">
+                <ResizablePanel defaultSize="35" minSize="30" className="h-full">
                     <ChatLayout
                         messages={messages}
                         sendMessage={sendMessage}
                         isLoading={isLoading}
                         onToggleContext={() => setIsContextOpen(prev => !prev)}
                         isContextOpen={isContextOpen}
+                        onCitationClick={handleCitationClick}
                     />
                 </ResizablePanel>
 
@@ -72,10 +78,11 @@ export function AppLayout({ defaultLayout: _defaultLayout = [20, 50, 30] }: AppL
                 {isContextOpen && (
                     <>
                         <ResizableHandle withHandle />
-                        <ResizablePanel defaultSize="40" minSize="30" maxSize="80">
+                        <ResizablePanel defaultSize="45" minSize="30" maxSize="80">
                             <ContextPanel
                                 sources={sources}
                                 onClose={() => setIsContextOpen(false)}
+                                activeCitation={activeCitation}
                             />
                         </ResizablePanel>
                     </>
