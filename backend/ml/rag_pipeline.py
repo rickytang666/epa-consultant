@@ -100,6 +100,7 @@ async def query_rag(
         "Use the provided context to answer the user's question. "
         "Your answers must be grounded in the context. "
         "When referencing specific rules or sections, cite the source using the format [Source: Header > Path]. "
+        "Example Citation: [Source: 40 CFR Part 112 > 112.1 - Purpose]."
         "If the answer is not in the context, say you don't know.\n\n"
     )
 
