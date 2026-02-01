@@ -113,5 +113,39 @@ def test_rag_quality(item):
         include_reason=True
     )
 
-    assert_test(test_case, [faithfulness, relevancy])
+    # measure metrics manually to collect scores
+    faithfulness.measure(test_case)
+    relevancy.measure(test_case)
+
+    # store scores
+    f_score = faithfulness.score
+    r_score = relevancy.score
+    
+    print(f"\n[TestCase: {item['input'][:30]}...]")
+    print(f"  Faithfulness: {f_score:.2f}")
+    print(f"  Relevancy:    {r_score:.2f}")
+    
+    # Store globally for average calculation
+    if not hasattr(test_rag_quality, "results"):
+        test_rag_quality.results = []
+    test_rag_quality.results.append({"f": f_score, "r": r_score})
+
+    # Assert after collecting (so we see the score even if it fails)
+    assert faithfulness.is_successful(), f"Faithfulness parsed: {faithfulness.reason}"
+    assert relevancy.is_successful(), f"Relevancy parsed: {relevancy.reason}"
+
+# simple hook to print averages at the end
+@pytest.fixture(scope="session", autouse=True)
+def print_averages():
+    yield
+    # this runs after tests
+    results = getattr(test_rag_quality, "results", [])
+    if results:
+        avg_f = sum(r["f"] for r in results) / len(results)
+        avg_r = sum(r["r"] for r in results) / len(results)
+        print("\n" + "="*40)
+        print(f"AVERAGE SCORES (n={len(results)})")
+        print(f"Faithfulness: {avg_f:.2f}")
+        print(f"Relevancy:    {avg_r:.2f}")
+        print("="*40 + "\n")
 

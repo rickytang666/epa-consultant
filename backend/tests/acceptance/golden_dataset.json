@@ -1,0 +1,32 @@
+[
+  {
+    "input": "What are the four pesticide use patterns covered by this permit?",
+    "actual_output": "", 
+    "expected_output": "The four pesticide use patterns covered are: 1. Mosquito and Other Flying Insect Pest Control, 2. Weed and Algae Pest Control, 3. Animal Pest Control, and 4. Forest Canopy Pest Control.",
+    "context": []
+  },
+  {
+    "input": "When does this permit expire?",
+    "actual_output": "",
+    "expected_output": "The permit expires at 11:59 p.m. on October 30, 2031.",
+    "context": []
+  },
+  {
+    "input": "What are the two types of Operators defined in this permit?",
+    "actual_output": "",
+    "expected_output": "The two types of Operators are Applicators (entities who perform the application) and Decision-makers (entities with control over the decision to perform the application).",
+    "context": []
+  },
+  {
+    "input": "What are the specific deadlines for filing an NOI for a new decision-maker?",
+    "actual_output": "",
+    "expected_output": "For a decision-maker exceeding an annual treatment area threshold, the deadline is at least 10 days before exceeding the threshold. For a decision-maker otherwise required to submit an NOI (Table 1-1), it is at least 10 days before any discharge.",
+    "context": []
+  },
+  {
+    "input": "What are the six specific ESA eligibility criteria (A-G) and which one is a placeholder?",
+    "actual_output": "",
+    "expected_output": "The six criteria are A, C, D, E, F, and G. Criterion B is a placeholder and not applicable for the PGP. Criterion A is for no FWS/NMFS listed resources. C is for Section 10 permit. D is for Section 7 consultation. E is for coordination with Services. F is for not likely to result in adverse effects. G is for Declared Pest Emergency.",
+    "context": []
+  }
+]

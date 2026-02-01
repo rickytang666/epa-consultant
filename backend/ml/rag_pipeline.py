@@ -102,8 +102,9 @@ async def query_rag(
         "When referencing specific rules or sections, cite the source using the format [Source: Header > Path]. "
         "Example Citation: [Source: 40 CFR Part 112 > 112.1 - Purpose]."
         "If the answer is not in the context, say you don't know.\n"
-        "Answer the question directly. Do not include related but unasked details (e.g. if asked for expiration, do not mention effective dates).\n"
-        "Be concise but ensure all conditions and exceptions mentioned in the context are included.\n\n"
+        "Answer the question directly and accurately based ONLY on the context provided.\n"
+        "Do not infer details or roles not explicitly stated.\n"
+        "Focus on the specific information asked for. Include relevant conditions/exceptions only if they directly affect the answer.\n\n"
     )
 
     if doc_summary:
