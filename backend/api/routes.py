@@ -25,7 +25,7 @@ async def query(request: QueryRequest):
     async def generate():
         async for chunk in query_rag(request.question):
             if chunk["type"] == "content":
-                print(chunk)
+                # print(chunk)
                 yield f"content: {json.dumps(chunk['delta'])}\n\n"
             elif chunk["type"] == "sources":
                 yield f"sources: {json.dumps(chunk['data'])}\n\n"
