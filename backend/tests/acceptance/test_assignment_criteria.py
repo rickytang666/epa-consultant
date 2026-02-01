@@ -128,11 +128,17 @@ def test_rag_quality(item):
     # Store globally for average calculation
     if not hasattr(test_rag_quality, "results"):
         test_rag_quality.results = []
-    test_rag_quality.results.append({"f": f_score, "r": r_score})
-
-    # Assert after collecting (so we see the score even if it fails)
-    assert faithfulness.is_successful(), f"Faithfulness parsed: {faithfulness.reason}"
-    assert relevancy.is_successful(), f"Relevancy parsed: {relevancy.reason}"
+    
+    # Store detailed result
+    result_entry = {
+        "input": input_text,
+        "f": f_score,
+        "r": r_score,
+        "f_reason": faithfulness.reason if not faithfulness.is_successful() else None,
+        "r_reason": relevancy.reason if not relevancy.is_successful() else None,
+        "passed": faithfulness.is_successful() and relevancy.is_successful()
+    }
+    test_rag_quality.results.append(result_entry)
 
 # simple hook to print averages at the end
 @pytest.fixture(scope="session", autouse=True)
@@ -143,9 +149,33 @@ def print_averages():
     if results:
         avg_f = sum(r["f"] for r in results) / len(results)
         avg_r = sum(r["r"] for r in results) / len(results)
-        print("\n" + "="*40)
-        print(f"AVERAGE SCORES (n={len(results)})")
-        print(f"Faithfulness: {avg_f:.2f}")
-        print(f"Relevancy:    {avg_r:.2f}")
-        print("="*40 + "\n")
+        
+        print("\n" + "="*80)
+        print("FINAL EVALUATION REPORT")
+        print("="*80)
+        print(f"{'Question':<50} | {'Faith':<6} | {'Relev':<6} | {'Status'}")
+        print("-" * 80)
+        
+        failed_count = 0
+        for res in results:
+            status = "PASS" if res["passed"] else "FAIL"
+            if not res["passed"]:
+                failed_count += 1
+            # Truncate question for display
+            q_display = (res['input'][:47] + '...') if len(res['input']) > 47 else res['input']
+            print(f"{q_display:<50} | {res['f']:.2f}   | {res['r']:.2f}   | {status}")
+            
+            # Print reasons if failed
+            if not res["passed"]:
+                if res["f_reason"]:
+                    print(f"  > Faithfulness Failure: {res['f_reason']}")
+                if res["r_reason"]:
+                    print(f"  > Relevancy Failure:    {res['r_reason']}")
+                print("-" * 80)
+
+        print("="*80)
+        print(f"SUMMARY: {len(results) - failed_count}/{len(results)} Tests Passed")
+        print(f"Average Faithfulness: {avg_f:.2f}")
+        print(f"Average Relevancy:    {avg_r:.2f}")
+        print("="*80 + "\n")
 

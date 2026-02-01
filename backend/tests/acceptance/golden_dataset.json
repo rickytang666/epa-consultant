@@ -28,5 +28,17 @@
     "actual_output": "",
     "expected_output": "The six criteria are A, C, D, E, F, and G. Criterion B is a placeholder and not applicable for the PGP. Criterion A is for no FWS/NMFS listed resources. C is for Section 10 permit. D is for Section 7 consultation. E is for coordination with Services. F is for not likely to result in adverse effects. G is for Declared Pest Emergency.",
     "context": []
+  },
+  {
+    "input": "Are discharges to Tier 3 Outstanding National Resource Waters (ONRW) eligible for coverage under this permit? Explain the exception.",
+    "actual_output": "",
+    "expected_output": "Generally, no. Discharges to Tier 3 Waters (ONRWs) are not eligible. The Exception is for pesticide applications made to restore or maintain water quality or to protect public health or the environment, provided they do not degrade water quality or only degrade it on a short-term or temporary basis.",
+    "context": []
+  },
+  {
+    "input": "If an Operator observes an adverse incident, what are the two required notification steps and their deadlines?",
+    "actual_output": "",
+    "expected_output": "1. 24-Hour Notification: Call the appropriate EPA Incident Reporting Contact within 24 hours of becoming aware of the incident. 2. 30-Day Reporting: Submit a written report to the EPA Regional Office (and state lead agency) within 30 days of the incident.",
+    "context": []
   }
 ]

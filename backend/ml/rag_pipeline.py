@@ -138,6 +138,7 @@ async def query_rag(
             ],
             use_case="rag_generation",
             stream=True,
+            temperature=0.0,
         )
 
         # print(f"DEBUG: stream initialized for rag_generation")
