@@ -6,7 +6,7 @@ def test_query_rag_mocked():
     """test rag pipeline logic with mocks"""
     
     with patch("ml.rag_pipeline.retrieve_relevant_chunks") as mock_retrieval, \
-         patch("ml.rag_pipeline.or_client") as mock_openai:
+         patch("ml.rag_pipeline._get_llm") as mock_get_llm:
         
         # setup retrieval mock
         mock_retrieval.return_value = [
@@ -14,8 +14,10 @@ def test_query_rag_mocked():
             {"text": "Safety standards are paramount.", "metadata": {}}
         ]
         
-        # setup openai mock
-        # we act as if openai client is present
+        # setup llm mock
+        mock_llm_instance = MagicMock()
+        mock_get_llm.return_value = mock_llm_instance
+        
         # create a mock stream
         mock_chunk1 = MagicMock()
         mock_chunk1.choices[0].delta.content = "The "
@@ -24,7 +26,21 @@ def test_query_rag_mocked():
         mock_chunk3 = MagicMock()
         mock_chunk3.choices[0].delta.content = "regulates."
         
-        mock_openai.chat.completions.create.return_value = [mock_chunk1, mock_chunk2, mock_chunk3]
+        # setup mock return for chat_completion
+        async def async_stream():
+            yield mock_chunk1
+            yield mock_chunk2
+            yield mock_chunk3
+            
+        async def mock_chat_completion_func(*args, **kwargs):
+            if kwargs.get("use_case") == "router":
+                # router expects a dict-like response
+                return {"content": "core"}
+            
+            # rag expects a stream
+            return async_stream()
+            
+        mock_llm_instance.chat_completion.side_effect = mock_chat_completion_func
         
         # execute
         generator = query_rag_sync("What does EPA regulate?")
@@ -41,4 +57,4 @@ def test_query_rag_mocked():
         content_text = "".join([c["delta"] for c in chunks if c["type"] == "content"])
         assert "The EPA regulates." in content_text
         mock_retrieval.assert_called_once()
-        mock_openai.chat.completions.create.assert_called_once()
+        assert mock_llm_instance.chat_completion.call_count >= 1

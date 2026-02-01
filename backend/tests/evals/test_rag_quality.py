@@ -80,7 +80,11 @@ def test_rag_quality(item):
             actual_output += chunk["delta"]
         elif chunk["type"] == "sources":
             for source in chunk["data"]:
-                retrieved_context.append(source.get("text", ""))
+                text = source.get("text", "")
+                meta = source.get("metadata", {})
+                if "header_path_str" in meta:
+                    text = f"[Source: {meta['header_path_str']}]\n{text}"
+                retrieved_context.append(text)
     
     # strip debug/status prefixes and confidence scores
     if "**Structuring answer...**" in actual_output:
