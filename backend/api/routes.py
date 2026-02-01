@@ -23,12 +23,25 @@ async def query(request: QueryRequest):
     """
 
     async def generate():
+        accumulated_response = []
+        sources_count = 0
+        
         async for chunk in query_rag(request.question):
             if chunk["type"] == "content":
                 # print(chunk)
+                accumulated_response.append(chunk['delta'])
                 yield f"content: {json.dumps(chunk['delta'])}\n\n"
             elif chunk["type"] == "sources":
+                sources_count = len(chunk['data'])
                 yield f"sources: {json.dumps(chunk['data'])}\n\n"
+        
+        # Print complete response to terminal
+        if accumulated_response:
+            full_response = "".join(accumulated_response)
+            print(f"\n{'='*80}\nQUESTION: {request.question}\n{'='*80}")
+            print(full_response)
+            print(f"\n[Sources: {sources_count} chunks]\n{'='*80}\n")
+        
         yield "state: [DONE]\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
