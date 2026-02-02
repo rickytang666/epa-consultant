@@ -1,48 +1,75 @@
 # ml/ai engineering
 
-core Adaptive RAG pipeline logic.
+adaptive rag pipeline with self-correction and hallucination detection.
 
 ## architecture
 
-The pipeline uses an **Adaptive RAG** approach with the following loop:
+**adaptive rag loop**:
 
-1. **Query**: User asks a question.
-2. **Contextualize**: `_generate_standalone_query` uses conversation history to rewrite pronouns/references.
-3. **Retrieve**: Hybrid Search (Vector + BM25) fetches top-k (default 10) chunks.
-4. **Generate**: Initial answer generation.
-5. **Judge**: `JudgeAgent` evaluates the answer for relevance and completeness.
-   - If score < 0.7: Suggests refined search tokens -> Re-retrieves -> Re-generates.
-6. **Hallucination Check**: `HallucinationDetector` (Singleton) computes an entailment score.
+1. **query**: user input.
+2. **contextualize**: rewrites query using chat history.
+3. **retrieve**: hybrid search (vector + bm25) for top-k chunks.
+4. **generate**: initial answer.
+5. **judge**: `judgeagent` evaluates quality. if < 0.7, refines search and retries.
+6. **hallucination check**: cross-encoder verifies answer logic.
 
-## files
+## key files
 
-- `rag_pipeline.py`: Main entry point. Implements variables handling, retry loop, and streaming response.
-- `retrieval.py`: Hybrid search implementation. Defaults to `top_k=10`.
-- `judge.py`: Self-reflection agent. Uses LLM to critique and refine answers.
-- `hallucination.py`: Runtime verification using Cross-Encoders (Singleton pattern for performance).
-- `vector_store.py`: ChromaDB wrapper.
-- `embeddings.py`: Embedding generation (OpenAI/Gemini).
-
-## benchmarks & tuning
-
-- **Tuning**: Found that `top_k=10` is required to capture "Tier 3" eligibility rules (Rank 8).
-- **Prompting**: System prompt explicitly handles conditional logic (e.g., "unless", "provided that").
+- **rag_pipeline.py**: main entry point, handles retry loop and streaming.
+- **retrieval.py**: hybrid search implementation.
+- **judge.py**: self-reflection agent using llm.
+- **hallucination.py**: runtime verification (singleton).
 
 ## usage
 
-Run scripts from the `backend` directory using `uv`:
+all scripts should be run from `backend/` using `uv`.
+
+### tuning & benchmarks
 
 ```bash
-# 1. Setup & Seeding
-uv run python scripts/setup/seed_db.py
+# benchmark retrieval performance (requires annotated dataset)
+uv run python scripts/tuning/benchmark_retrieval.py
 
-# 2. Manual Verification
+# hyperparameter tuning for retrieval (grid search on k, alpha)
+uv run python scripts/tuning/tune_retrieval.py
+
+# verify prompt quality
+uv run python scripts/tuning/test_prompt_quality.py
+```
+
+### tests
+
+**manual verification**
+
+```bash
+# simple manual rag query test
 uv run python tests/manual/manual_rag_test.py
 
-# 3. Tuning & Quality Checks
-uv run python scripts/tuning/test_quality.py   # Spot check specific queries
-uv run pytest tests/evals/test_rag_quality.py  # Full DeepEval regression suite
+# check api citation format
+uv run python tests/manual/api_citation_test.py
 
-# 4. Integration Tests
-uv run pytest tests/integration/
+# visualize chunk tree text
+uv run python tests/manual/print_tree.py
+
+# demonstate small chunk splitting logic
+uv run python tests/manual/small_chunks_demonstration.py
+```
+
+**integration tests**
+
+```bash
+# full rag flow integration test
+uv run pytest tests/integration/test_rag.py
+
+# vector store integration
+uv run pytest tests/integration/test_vector_store.py
+```
+
+### acceptance tests (deepeval)
+
+runs `faithfulness` and `answer relevancy` metrics against a golden dataset using deepeval.
+
+```bash
+# run acceptance suite
+uv run pytest tests/acceptance/test_assignment_criteria.py
 ```
