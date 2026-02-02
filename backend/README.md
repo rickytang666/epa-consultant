@@ -28,3 +28,19 @@ uv run uvicorn main:app --reload
 - `GET /` - health check
 - `POST /query` - rag query
 - `GET /tables` - extracted tables
+
+## testing
+
+running acceptance tests (deepeval):
+
+```bash
+uv run pytest tests/acceptance/test_assignment_criteria.py
+```
+
+### quick response check
+
+to see how the agent answers the test questions without running the full evaluation metrics:
+
+```bash
+uv run python scripts/test_responses.py
+```
