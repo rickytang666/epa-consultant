@@ -58,7 +58,7 @@ export function MessageBubble({ role, content, onCitationClick, className, ...pr
                 </div>
             )}
 
-            <div className={cn(bubbleVariants({ role }), "prose dark:prose-invert prose-sm max-w-none break-words", className)} {...props}>
+            <div className={cn(bubbleVariants({ role }), "prose dark:prose-invert prose-sm max-w-none break-words prose-table:border prose-th:bg-muted prose-th:p-2 prose-td:p-2", className)} {...props}>
                 <Markdown
                     remarkPlugins={[remarkBreaks, remarkGfm]}
                     components={{
