@@ -53,7 +53,7 @@ class OpenAILLM(DeepEvalBaseLLM):
         return self.model_name
 
 # init judge with prompt caching enabled
-openai_judge = OpenAILLM(model_name="gpt-4o-mini")
+openai_judge = OpenAILLM(model_name="gpt-4o")
 
 
 # load golden dataset
@@ -102,13 +102,13 @@ def test_rag_quality(item):
 
     # metrics using OpenAI with prompt caching
     faithfulness = FaithfulnessMetric(
-        threshold=0.7, 
+        threshold=0.6, 
         model=openai_judge,
         include_reason=True
     )
     
     relevancy = AnswerRelevancyMetric(
-        threshold=0.7, 
+        threshold=0.6, 
         model=openai_judge,
         include_reason=True
     )

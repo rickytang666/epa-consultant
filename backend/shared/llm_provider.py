@@ -42,8 +42,8 @@ class LLMProvider:
             ("google", "gemini-2.0-flash-lite")
         ],
         "rag_generation": [
+            ("openai", "gpt-4o-mini"),
             ("openrouter", "openai/gpt-oss-120b"),
-            ("openai", "gpt-5-nano"),
             ("google", "gemini-2.5-flash")
         ],
         "embeddings": [

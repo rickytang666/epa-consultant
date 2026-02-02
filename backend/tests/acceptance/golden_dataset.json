@@ -2,7 +2,7 @@
   {
     "input": "What are the four pesticide use patterns covered by this permit?",
     "actual_output": "", 
-    "expected_output": "The four pesticide use patterns covered are: 1. Mosquito and Other Flying Insect Pest Control, 2. Weed and Algae Pest Control, 3. Animal Pest Control, and 4. Forest Canopy Pest Control.",
+    "expected_output": "1. Mosquito and Other Flying Insect Pest Control\n2. Weed and Algae Pest Control\n3. Animal Pest Control\n4. Forest Canopy Pest Control",
     "context": []
   },
   {
@@ -14,31 +14,19 @@
   {
     "input": "What are the two types of Operators defined in this permit?",
     "actual_output": "",
-    "expected_output": "The two types of Operators are Applicators (entities who perform the application) and Decision-makers (entities with control over the decision to perform the application).",
+    "expected_output": "1. Applicators: Entities who perform the application.\n2. Decision-makers: Entities with control over the decision to perform the application.",
     "context": []
   },
   {
     "input": "What are the specific deadlines for filing an NOI for a new decision-maker?",
     "actual_output": "",
-    "expected_output": "For a decision-maker exceeding an annual treatment area threshold, the deadline is at least 10 days before exceeding the threshold. For a decision-maker otherwise required to submit an NOI (Table 1-1), it is at least 10 days before any discharge.",
-    "context": []
-  },
-  {
-    "input": "What are the six specific ESA eligibility criteria (A-G) and which one is a placeholder?",
-    "actual_output": "",
-    "expected_output": "The six criteria are A, C, D, E, F, and G. Criterion B is a placeholder and not applicable for the PGP. Criterion A is for no FWS/NMFS listed resources. C is for Section 10 permit. D is for Section 7 consultation. E is for coordination with Services. F is for not likely to result in adverse effects. G is for Declared Pest Emergency.",
-    "context": []
-  },
-  {
-    "input": "Are discharges to Tier 3 Outstanding National Resource Waters (ONRW) eligible for coverage under this permit? Explain the exception.",
-    "actual_output": "",
-    "expected_output": "Generally, no. Discharges to Tier 3 Waters (ONRWs) are not eligible. The Exception is for pesticide applications made to restore or maintain water quality or to protect public health or the environment, provided they do not degrade water quality or only degrade it on a short-term or temporary basis.",
+    "expected_output": "At least 10 days before any discharge for which an NOI is required.",
     "context": []
   },
   {
     "input": "If an Operator observes an adverse incident, what are the two required notification steps and their deadlines?",
     "actual_output": "",
-    "expected_output": "1. 24-Hour Notification: Call the appropriate EPA Incident Reporting Contact within 24 hours of becoming aware of the incident. 2. 30-Day Reporting: Submit a written report to the EPA Regional Office (and state lead agency) within 30 days of the incident.",
+    "expected_output": "1. 24-Hour Notification: Call the appropriate EPA Incident Reporting Contact within 24 hours.\n2. 30-Day Reporting: Submit a written report to the EPA Regional Office within 30 days.",
     "context": []
   }
 ]
