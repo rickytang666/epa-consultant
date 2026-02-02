@@ -63,13 +63,26 @@ export function AppLayout({ defaultLayout: _defaultLayout = [50, 50] }: AppLayou
                     </>
                 )}
             </ResizablePanelGroup>
-
-            {/* Full Screen Table Explorer */}
-            {rightPanel === 'tables' && (
-                <div className="absolute inset-0 z-50 bg-background animate-in fade-in duration-200">
-                    <TableExplorer onClose={() => setRightPanel(null)} />
+            
+            {/* Full Screen Table Explorer with Slide-Over Transition */}
+            <div
+                className={`fixed inset-0 z-50 bg-background/80 backdrop-blur-sm transition-opacity duration-300 ${
+                    rightPanel === 'tables' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                }`}
+            >
+                {/* The Sliding Layer */}
+                <div
+                    className={`absolute inset-y-0 right-0 w-full transform transition-transform duration-300 ease-in-out ${
+                        rightPanel === 'tables' ? 'translate-x-0' : 'translate-x-full'
+                    }`}
+                >
+                    {rightPanel === 'tables' && (
+                         <div className="h-full w-full bg-background shadow-2xl animate-in slide-in-from-right duration-300 ease-out">
+                            <TableExplorer onClose={() => setRightPanel(null)} />
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
         </TooltipProvider>
     );
 }

@@ -7,6 +7,7 @@ import rehypeRaw from "rehype-raw";
 import { Loader2, X, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 // Interface for raw incoming chunks
 interface TableChunk {
@@ -168,8 +169,8 @@ export function TableExplorer({ onClose }: TableExplorerProps) {
   }, [groupedTables, showForms]);
 
   return (
-    <div className="flex h-full flex-col border-l bg-background">
-      <div className="flex h-14 items-center justify-between border-b px-4">
+    <div className="flex h-full flex-col border-l shadow-xl bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-14 items-center justify-between border-b px-4 bg-muted/20">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold">Table Explorer</h2>
           <Badge variant="outline" className="text-xs font-normal">
@@ -208,27 +209,30 @@ export function TableExplorer({ onClose }: TableExplorerProps) {
                     variant={
                       selectedTable?.id === table.id ? "secondary" : "ghost"
                     }
-                    className="h-auto justify-start px-3 py-3 text-left items-start whitespace-normal"
+                    className={cn(
+                      "h-auto justify-start px-3 py-3 text-left items-start whitespace-normal rounded-xl transition-all duration-200",
+                      selectedTable?.id === table.id && "bg-accent shadow-sm border-l-4 border-l-primary rounded-l-none"
+                    )}
                     onClick={() => setSelectedTable(table)}
                   >
                     <div className="flex flex-col gap-1 w-full">
                       <div className="flex items-start justify-between gap-2">
-                        <span className="font-medium text-sm line-clamp-2 break-words leading-tight">
+                        <span className={cn("font-medium text-sm line-clamp-2 break-words leading-tight", selectedTable?.id === table.id ? "text-foreground" : "text-muted-foreground")}>
                           {table.title}
                         </span>
                         {table.is_form && (
                           <Badge
                             variant="secondary"
-                            className="h-3 px-1 text-[9px] shrink-0 mt-0.5"
+                            className="h-3 px-1 text-[9px] shrink-0 mt-0.5 opacity-70"
                           >
                             FORM
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mt-1.5 font-mono opacity-80">
                          <span>Page {table.page_number}</span>
-                         <span className="text-[10px] opacity-70">
-                           {table.chunks_count > 1 ? `${table.chunks_count} fragments` : ''}
+                         <span className="text-[10px]">
+                           {table.chunks_count > 1 ? `${table.chunks_count} frags` : ''}
                          </span>
                       </div>
                     </div>
@@ -260,26 +264,35 @@ export function TableExplorer({ onClose }: TableExplorerProps) {
                       </div>
                       
                       {/* Tree-like Header Context in Main Panel */}
-                      <div className="mt-4 flex flex-col gap-1 rounded-md bg-muted/40 p-3 border text-sm text-muted-foreground overflow-x-auto">
-                         <span className="text-xs font-semibold text-foreground/70 uppercase tracking-wider mb-2">Location Context</span>
-                        {selectedTable.header_path_raw ? (
-                          selectedTable.header_path_raw.map((item, index) => (
-                            <div key={index} className="flex items-center gap-2 whitespace-nowrap" style={{ paddingLeft: `${index * 16}px` }}>
-                              {index > 0 && <span className="text-muted-foreground/40 font-light">└─</span>}
-                              <span
-                                className={
-                                  index === selectedTable.header_path_raw!.length - 1
-                                    ? "font-medium text-foreground"
-                                    : "text-muted-foreground"
-                                }
-                              >
-                                {item.name.replace(/\*\*/g, '')}
-                              </span>
-                            </div>
-                          ))
-                        ) : (
-                          <span>{selectedTable.header_path}</span>
-                        )}
+                      <div className="mt-6 flex flex-col gap-2 overflow-x-auto">
+                         <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-widest pl-1">Location Context</span>
+                         <div className="flex flex-col gap-1.5 pl-1">
+                          {selectedTable.header_path_raw ? (
+                            selectedTable.header_path_raw.map((item, index) => (
+                              <div key={index} className="flex items-center gap-3 whitespace-nowrap group">
+                                <div className="flex flex-col items-center justify-center opacity-30 w-4">
+                                   {index < selectedTable.header_path_raw!.length - 1 ? (
+                                     <div className="w-[1px] h-full bg-foreground/50" />
+                                   ) : (
+                                     <div className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+                                   )}
+                                </div>
+                                <span
+                                  className={cn(
+                                    "text-sm transition-colors duration-200",
+                                    index === selectedTable.header_path_raw!.length - 1
+                                      ? "font-semibold text-foreground"
+                                      : "text-muted-foreground group-hover:text-foreground/80"
+                                  )}
+                                >
+                                  {item.name.replace(/\*\*/g, '')}
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <span>{selectedTable.header_path}</span>
+                          )}
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="pt-6 overflow-hidden max-w-full">

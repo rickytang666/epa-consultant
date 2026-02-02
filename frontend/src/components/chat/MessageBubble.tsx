@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 import { User, Bot } from 'lucide-react';
 
 const bubbleVariants = cva(
-    "flex w-fit max-w-[85%] flex-col gap-2 rounded-lg px-4 py-3 text-sm shadow-sm",
+    "flex w-fit max-w-[85%] flex-col gap-2 rounded-2xl px-5 py-3.5 text-sm shadow-sm",
     {
         variants: {
             role: {
-                user: "ml-auto bg-primary text-primary-foreground",
-                assistant: "bg-muted/80 text-foreground border",
+                user: "ml-auto bg-primary text-primary-foreground rounded-tr-sm",
+                assistant: "bg-card text-foreground border border-muted/40 rounded-tl-sm shadow-sm",
             },
         },
         defaultVariants: {

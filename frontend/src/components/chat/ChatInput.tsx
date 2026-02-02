@@ -39,25 +39,27 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
     }, [input]);
 
     return (
-        <div className="relative flex items-end gap-2 p-4 bg-background border-t">
-            <Textarea
-                ref={textareaRef}
-                placeholder="Ask about EPA regulations..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="min-h-[50px] max-h-[200px] resize-none pr-12 py-3"
-                rows={1}
-                disabled={isLoading}
-            />
-            <Button
-                size="icon"
-                onClick={handleSend}
-                disabled={!input.trim() || isLoading}
-                className="absolute right-6 bottom-6 h-8 w-8"
-            >
-                <SendHorizontal className="h-4 w-4" />
-            </Button>
+        <div className="relative flex items-end gap-2 p-4 pt-2 bg-background/50 backdrop-blur-sm border-t">
+            <div className="relative flex-1 rounded-2xl border bg-background shadow-sm focus-within:ring-1 focus-within:ring-ring transition-all">
+                <Textarea
+                    ref={textareaRef}
+                    placeholder="Ask about EPA regulations..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="min-h-[50px] max-h-[200px] resize-none pr-12 py-3.5 border-0 focus-visible:ring-0 shadow-none bg-transparent rounded-2xl"
+                    rows={1}
+                    disabled={isLoading}
+                />
+                <Button
+                    size="icon"
+                    onClick={handleSend}
+                    disabled={!input.trim() || isLoading}
+                    className="absolute right-2 bottom-2 h-8 w-8 rounded-xl transition-all hover:scale-105 active:scale-95"
+                >
+                    <SendHorizontal className="h-4 w-4" />
+                </Button>
+            </div>
         </div>
     );
 }

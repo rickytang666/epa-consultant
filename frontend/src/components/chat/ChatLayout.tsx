@@ -53,8 +53,12 @@ export function ChatLayout({
                 </div>
             </header>
             <div className="flex-1 bg-background flex flex-col overflow-hidden">
-                <ChatList messages={messages} onCitationClick={onCitationClick} />
-                <ChatInput onSend={sendMessage} isLoading={isLoading} />
+                <div className="flex-1 w-full max-w-4xl mx-auto flex flex-col overflow-hidden">
+                     <ChatList messages={messages} onCitationClick={onCitationClick} />
+                </div>
+                <div className="w-full max-w-4xl mx-auto">
+                    <ChatInput onSend={sendMessage} isLoading={isLoading} />
+                </div>
             </div>
         </div>
     );
