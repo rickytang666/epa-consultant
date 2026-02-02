@@ -57,6 +57,7 @@ export function AppLayout({ defaultLayout: _defaultLayout = [50, 50] }: AppLayou
                                     sources={sources}
                                     onClose={() => setRightPanel(null)}
                                     activeCitation={activeCitation}
+                                    isLoading={isLoading}
                                 />
                             ) : (
                                 <TableExplorer

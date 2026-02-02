@@ -16,9 +16,10 @@ interface PDFViewerProps {
     fileUrl?: string;
     citations: Citation[];
     activeCitation?: string | null;
+    isLoading?: boolean;
 }
 
-export function PDFViewer({ fileUrl, citations, activeCitation }: PDFViewerProps) {
+export function PDFViewer({ fileUrl, citations, activeCitation, isLoading }: PDFViewerProps) {
     // Zoom State: Percentage (Default 100% = 700px)
     const [scalePercent, setScalePercent] = useState<number>(100);
 
@@ -108,6 +109,10 @@ export function PDFViewer({ fileUrl, citations, activeCitation }: PDFViewerProps
     function makeTextRenderer(pageNumber: number) {
         return (textItem: any) => {
             const str = textItem.str;
+            
+            // Defer highlighting until streaming finishes to avoid glitches
+            if (isLoading) return str;
+
             const cleanStr = str.trim();
             
             // Noise Filter: Ignore short fragments unless they are numbers
