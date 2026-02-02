@@ -108,6 +108,14 @@ export function PDFViewer({ fileUrl, citations, activeCitation }: PDFViewerProps
     function makeTextRenderer(pageNumber: number) {
         return (textItem: any) => {
             const str = textItem.str;
+            const cleanStr = str.trim();
+            
+            // Noise Filter: Ignore short fragments unless they are numbers
+            // This prevents highlighting single letters or short common words like "the"
+            if (cleanStr.length < 4 && !/^\d+$/.test(cleanStr)) {
+                return str;
+            }
+
             const relevantCitations = citations.filter(c => c.page === pageNumber);
 
             const isMatch = relevantCitations.some(c =>
