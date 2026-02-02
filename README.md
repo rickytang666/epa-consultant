@@ -2,7 +2,7 @@
 
 # EPA Pesticide Regulatory Consultant
 
-An intelligent RAG system for querying unstructured EPA pesticide regulatory PDFs.
+A RAG system for querying unstructured EPA pesticide regulatory PDFs.
 
 </div>
 
@@ -10,13 +10,9 @@ An intelligent RAG system for querying unstructured EPA pesticide regulatory PDF
 
 ## Introduction
 
-A RAG pipeline that transforms unstructured EPA regulatory PDFs into structured, queryable data. It uses hybrid search (Vector + BM25), a self-correcting "Judge" agent, and runtime hallucination detection to ensure high-accuracy answers with cited evidence.
-
-
+A RAG pipeline for converting unstructured EPA regulatory PDFs into structured, queryable data. It utilizes hybrid search (Vector + BM25), an autonomous "Judge" agent for query refinement, and evidence-based verification to ensure high-accuracy answers with cited sources.
 
 https://github.com/user-attachments/assets/aeca454a-2977-47ca-9b70-2df93f4ae5aa
-
-
 
 ## Tech Stack
 
@@ -77,22 +73,54 @@ npm run dev
 
 ## How It Works
 
-### 1. Data Ingestion (Data Engineering)
+The system is designed to handle the complexity of **regulatory compliance** where precision is more important than "creativity."
 
-- **Extraction**: Uses DataLab API to convert PDFs into Markdown, preserving layout and tables.
-- **Parsing**: Splits documents by page and identifies hierarchical sections.
-- **Correction**: Uses LLM to fix broken header hierarchies (e.g., detecting that "1.0" is a sub-header of "Section 1") based on numbering patterns.
-- **Chunking**: Merges small sections and improved splitting of large sections to maintain context window efficiency.
-- **Table Extraction**: Dedicated `extract_tables.py` script that handles complex multi-page merging, deduplication, and cleaning to generate `tables.json` for the Table Explorer.
+We treat the PDF as a structured database rather than just a wall of text.
 
-### 2. Adaptive RAG (ML)
+```mermaid
+graph TD
+    A[Raw 170+ Page PDF] --> B[High-Fidelity Markdown Extraction]
+    B --> C[Hierarchical Sectioning & Table Stitching]
+    C --> D[(Vector + BM25 Database)]
 
-- **Hybrid Search**: Combines Dense Vector Retrieval (semantic search) with BM25 (keyword search) to capture both conceptual matches and specific regulatory codes.
-- **Self-Correction Loop**: A "Judge Agent" evaluates generated answers for relevance. If confidence is low (< 0.7), it rewrites the search query and retries.
-- **Hallucination Detection**: A dedicated Cross-Encoder model verifies that the generated answer is strictly entailed by the retrieved context before returning it to the user.
-- **Evaluation**: Uses DeepEval to run acceptance tests against a golden dataset, measuring faithfulness and answer relevancy to ensure rigorous quality standards.
+    E[User Question] --> F{Hybrid Retrieval}
+    D -.-> F
+    F --> G[Context-Grounded Answer Generation]
+    G --> H{Judge Agent Verification}
+    H -- Low Confidence --> F
+    H -- High Confidence --> I[Final Answer with Citations]
 
-### 3. User Interface (Full-Stack)
+    I --> J[DeepEval Quality Guardrails]
+```
+
+### 1. The Knowledge Engine (Data Engineering)
+
+- **The Challenge**: EPA documents use inconsistent numbering (e.g., _Part 1.2.1_ vs _Section II_) and tables often split across pages, losing their headers.
+- **The Solution**: We implemented a **"Stitch & Refine"** pipeline.
+  - **Hierarchical Parsing**: We reconstruct the document tree to understand the relationship between headers and sub-headers.
+  - **Table Refinement**: A specialized `extract_tables.py` script identifies fragmented tables across page breaks and "re-stitches" them into single, queryable JSON objects.
+  - **Template Filtering**: Automatically identifies and filters out empty template forms (common in Appendices) to reduce "noise" in search results.
+
+### 2. Hybrid Intent Matching (Retrieval)
+
+- **The Challenge**: Standard AI search (Vectors) is great for "vibes" but terrible at specific regulatory codes (e.g., "WAG87####E").
+- **The Solution**: We utilize **Hybrid Search** with **Reciprocal Rank Fusion (RRF)**.
+  - **Vector Search**: Performs semantic retrieval to find conceptually related sections (e.g., "How to report an accident").
+  - **BM25 (Keyword Search)**: Performs exact-match retrieval for precise regulatory codes, chemical names, or acronyms.
+  - **Fusion (RRF)**: Mathematically combines both result sets to ensure the most relevant chunks rise to the top, regardless of whether they were found by "meaning" or "keywords."
+  - **Result**: Data is captured from both high-level legal intent and granular technical specifics.
+
+### 3. The Verifiable Answer (ML & Quality)
+
+- **The Challenge**: LLMs can "hallucinate" plausible but legally incorrect dates or deadlines.
+- **The Solution**:
+  - **Self-Correction Loop**: If our internal **Judge Agent** determines that the retrieved info doesn't fully answer the question, it autonomously rewrites the search query and tries again.
+  - **Evidence Grounding**: Each answer is accompanied by a **Clickable Citation**. The UI maps these directly to the PDF page and highlights the text to provide a "Chain of Custody" for information.
+  - **DeepEval Guardrails**: We use **Golden Datasets** and LLM-assisted metrics to enforce rigorous quality standards:
+    - **Faithfulness (Fact-Checking)**: Ensures the answer is strictly based on the retrieved text and doesn't invent new information.
+    - **Answer Relevancy**: Ensures the answer directly addresses the user's specific question without including irrelevant fluff.
+
+### 4. User Interface (Full-Stack)
 
 - **Q&A**: Interactive chat interface for querying documents.
 - **Citations**: Answers include citations linking back to specific source chunks.
