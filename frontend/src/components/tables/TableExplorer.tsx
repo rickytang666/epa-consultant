@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
-import { Loader2, X, Filter } from "lucide-react";
+import { Loader2, X, Filter, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -32,6 +32,7 @@ interface GroupedTable {
   content: string;
   page_number: number;
   header_path: string;
+  header_path_raw?: { level: string; name: string }[];
   chunks_count: number;
   is_form: boolean;
 }
@@ -136,6 +137,7 @@ export function TableExplorer({ onClose }: TableExplorerProps) {
               content: mergedContent,
               page_number: firstChunk.location.page_number,
               header_path: headerPathStr,
+              header_path_raw: firstChunk.header_path,
               chunks_count: chunks.length,
               is_form: isFormHeuristic || (hasFormKeyword && isFormHeuristic), // Stronger check: must look empty-ish
             };
@@ -256,8 +258,26 @@ export function TableExplorer({ onClose }: TableExplorerProps) {
                           <Badge variant="outline">Likely Form</Badge>
                         )}
                       </CardTitle>
-                      <div className="mt-1 text-sm text-muted-foreground">
-                        {selectedTable.header_path}
+                      <div className="mt-2 flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
+                        {selectedTable.header_path_raw ? (
+                          selectedTable.header_path_raw.map((item, index) => (
+                            <div key={index} className="flex items-center gap-1">
+                              {index > 0 && <ChevronRight className="h-3 w-3" />}
+                              <span
+                                className={
+                                  index ===
+                                  selectedTable.header_path_raw!.length - 1
+                                    ? "font-medium text-foreground"
+                                    : ""
+                                }
+                              >
+                                {item.name.replace(/\*\*/g, '')}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <span>{selectedTable.header_path}</span>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="pt-6 overflow-x-auto">
