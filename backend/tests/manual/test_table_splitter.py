@@ -1,8 +1,8 @@
 import sys
 import os
 
-# quick hack to allow importing from backend
-sys.path.append(os.path.join(os.getcwd(), "backend"))
+# Add backend directory to path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from data_processing.table_splitter import split_markdown_table
 

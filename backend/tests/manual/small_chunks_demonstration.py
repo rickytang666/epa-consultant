@@ -8,6 +8,7 @@ import os
 import argparse
 
 # Add backend directory to path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from data_processing.ingest import DocumentIngestor
 
