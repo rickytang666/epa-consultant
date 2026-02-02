@@ -1,8 +1,11 @@
 import { useState, useCallback } from 'react';
 import type { Message, SourceChunk, Citation } from '../types';
 
+interface UseChatOptions {
+    onSourcesReceived?: (sources: Citation[]) => void;
+}
 
-export function useChat() {
+export function useChat(options?: UseChatOptions) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -83,6 +86,11 @@ export function useChat() {
                             }));
 
                             setSources(citations);
+                            
+                            // Trigger callback if provided
+                            if (options?.onSourcesReceived) {
+                                options.onSourcesReceived(citations);
+                            }
                         } catch (e) {
                             console.error("Failed to parse sources:", e);
                         }
@@ -96,7 +104,7 @@ export function useChat() {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [options]);
 
     return {
         messages,

@@ -107,7 +107,7 @@ export function PDFViewer({ fileUrl, citations, activeCitation, isLoading }: PDF
 
     // ... existing Custom Text Renderer ...
     function makeTextRenderer(pageNumber: number) {
-        return (textItem: any) => {
+        return (textItem: { str: string }) => {
             const str = textItem.str;
             
             // Defer highlighting until streaming finishes to avoid glitches

@@ -33,7 +33,7 @@ describe('Risk: Scroll Jitter', () => {
         const { rerender } = render(<RiskyChatList messages={['1']} userScrolledUp={false} />);
 
         // Reset mock
-        const scrollMock = window.HTMLElement.prototype.scrollIntoView as any;
+        const scrollMock = window.HTMLElement.prototype.scrollIntoView as unknown as { mockClear: () => void };
         scrollMock.mockClear();
 
         // Act: New message comes in, but user IS scrolled up.

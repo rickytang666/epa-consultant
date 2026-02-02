@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useChat } from '@/hooks/useChat';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -6,21 +6,20 @@ import { ChatLayout } from '@/components/chat/ChatLayout';
 import { ContextPanel } from '@/components/pdf/ContextPanel';
 import { TableExplorer } from '@/components/tables/TableExplorer';
 
-interface AppLayoutProps {
-    defaultLayout?: number[] | undefined;
-}
 
-export function AppLayout({ defaultLayout: _defaultLayout = [50, 50] }: AppLayoutProps) {
+export function AppLayout() {
     // rightPanel state: 'pdf' | 'tables' | null
     const [rightPanel, setRightPanel] = useState<'pdf' | 'tables' | null>(null);
     const [activeCitation, setActiveCitation] = useState<string | null>(null);
 
-    const { messages, sendMessage, isLoading, sources } = useChat();
+    const { messages, sendMessage, isLoading, sources } = useChat({
+        onSourcesReceived: (newSources) => {
+            if (newSources.length > 0 && rightPanel === null) {
+                setRightPanel('pdf');
+            }
+        }
+    });
 
-    // Auto-open context panel (pdf) when sources arrive
-    useEffect(() => {
-        if (sources.length > 0 && rightPanel === null) setRightPanel('pdf');
-    }, [sources]);
 
     const handleCitationClick = (citationKey: string) => {
         setRightPanel('pdf');
