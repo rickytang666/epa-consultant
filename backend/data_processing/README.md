@@ -40,6 +40,13 @@ pipeline for processing pdfs into rag-ready chunks with hierarchical logic.
 - generates bottom-up summaries (section -> document).
 - uses `section_summary.jinja2` and `document_summary.jinja2`.
 
+### extract_tables.py
+
+- rebuilds `tables.json` from extraction.
+- handles multi-page merging (e.g. Regions 4/10).
+- deduplicates sequential table fragments.
+- cleans HTML tags and fixes headers.
+
 ## usage
 
 all scripts should be run from `backend/` using `uv`.
@@ -56,6 +63,9 @@ uv run python scripts/pipeline/run_parsing.py "filename.json" --fix-headers
 
 # run full pipeline (extract + parse)
 uv run python scripts/pipeline/run_pipeline.py
+
+# run table extraction (required for frontend Table Explorer)
+uv run python scripts/pipeline/extract_tables.py
 ```
 
 ### setup

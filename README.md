@@ -42,7 +42,11 @@ cp .env.example .env
 # 1. Place your PDFs in backend/data/raw/
 # 2. Run the ingestion pipeline (Extract -> Parse -> Chunk)
 uv run python scripts/pipeline/run_pipeline.py
-# 3. Seed the Vector Database
+
+# 3. Extract Tables (Required for Table Explorer)
+uv run python scripts/pipeline/extract_tables.py
+
+# 4. Seed the Vector Database
 uv run python scripts/setup/seed_db.py
 
 # Run API server
@@ -73,6 +77,7 @@ npm run dev
 - **Parsing**: Splits documents by page and identifies hierarchical sections.
 - **Correction**: Uses LLM to fix broken header hierarchies (e.g., detecting that "1.0" is a sub-header of "Section 1") based on numbering patterns.
 - **Chunking**: Merges small sections and improved splitting of large sections to maintain context window efficiency.
+- **Table Extraction**: Dedicated `extract_tables.py` script that handles complex multi-page merging, deduplication, and cleaning to generate `tables.json` for the Table Explorer.
 
 ### 2. Adaptive RAG (ML)
 
