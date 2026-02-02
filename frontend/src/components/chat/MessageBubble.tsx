@@ -38,10 +38,17 @@ export function MessageBubble({ role, content, onCitationClick, className, ...pr
     // 1. [Source: ...] or [source: ...]
     // 2. 【Source: ...】 or 【source: ...】
     // 3. (Source: ...) or (source: ...)
-    const processedContent = content.replace(
-        /(?:\[|【|\()[Ss]ource:\s*(.*?)(?:\]|】|\))/g,
-        (_, capture) => `[Source: ${capture}](#citation:${encodeURIComponent(capture)})`
-    );
+    const processedContent = content
+        .replace(/<br\s*\/?>/gi, '\n') // Replace <br>, <br/>, <br /> with newline
+        .replace(
+            /(?:\[|【|\()[Ss]ource:\s*(.*?)(?:\]|】|\))/g,
+            (_, capture) => {
+                // encodeURIComponent doesn't encode parentheses, which breaks markdown links
+                // if the citation contains unbalanced parentheses. We manually encode them.
+                const encoded = encodeURIComponent(capture).replace(/\(/g, '%28').replace(/\)/g, '%29');
+                return `[Source: ${capture}](#citation:${encoded})`;
+            }
+        );
 
     return (
         <div className={cn("flex items-start gap-3", role === "user" ? "justify-end" : "justify-start", "mb-4")}>
