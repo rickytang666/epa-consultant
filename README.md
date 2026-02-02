@@ -12,6 +12,12 @@ An intelligent RAG system for querying unstructured EPA pesticide regulatory PDF
 
 A RAG pipeline that transforms unstructured EPA regulatory PDFs into structured, queryable data. It uses hybrid search (Vector + BM25), a self-correcting "Judge" agent, and runtime hallucination detection to ensure high-accuracy answers with cited evidence.
 
+
+
+https://github.com/user-attachments/assets/aeca454a-2977-47ca-9b70-2df93f4ae5aa
+
+
+
 ## Tech Stack
 
 - **Backend**: Python, FastAPI, LangChain, ChromaDB, LLMs (OpenAI/Gemini/OpenRouter), DeepEval, DataLab/PyMuPDF4LLM, Pydantic, Pytest, uv
