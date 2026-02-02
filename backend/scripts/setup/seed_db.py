@@ -98,7 +98,8 @@ def seed_database():
     # path to chunks.json
     # currently assuming backend/scripts is CWD or relative to it
     # file is at backend/data/processed/chunks.json
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # __file__ is backend/scripts/setup/seed_db.py -> three levels up to backend/
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     chunks_path = os.path.join(base_dir, "data", "processed", "chunks.json")
     
     if not os.path.exists(chunks_path):
