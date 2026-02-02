@@ -48,26 +48,28 @@ export function AppLayout({ defaultLayout: _defaultLayout = [50, 50] }: AppLayou
                 </ResizablePanel>
 
                 {/* RIGHT: Context (PDF) or Table Explorer */}
-                {rightPanel !== null && (
+                {/* RIGHT: Context (PDF) */}
+                {rightPanel === 'pdf' && (
                     <>
                         <ResizableHandle withHandle />
                         <ResizablePanel defaultSize={50} minSize={30}>
-                            {rightPanel === 'pdf' ? (
-                                <ContextPanel
-                                    sources={sources}
-                                    onClose={() => setRightPanel(null)}
-                                    activeCitation={activeCitation}
-                                    isLoading={isLoading}
-                                />
-                            ) : (
-                                <TableExplorer
-                                    onClose={() => setRightPanel(null)}
-                                />
-                            )}
+                            <ContextPanel
+                                sources={sources}
+                                onClose={() => setRightPanel(null)}
+                                activeCitation={activeCitation}
+                                isLoading={isLoading}
+                            />
                         </ResizablePanel>
                     </>
                 )}
             </ResizablePanelGroup>
+
+            {/* Full Screen Table Explorer */}
+            {rightPanel === 'tables' && (
+                <div className="absolute inset-0 z-50 bg-background animate-in fade-in duration-200">
+                    <TableExplorer onClose={() => setRightPanel(null)} />
+                </div>
+            )}
         </TooltipProvider>
     );
 }

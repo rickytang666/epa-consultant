@@ -78,7 +78,10 @@ def extract_tables_from_markdown():
             title = f"Table on Page {table_start_page}"
         
         # Cleanup title
+        # Remove markdown bold/italic
         title = title.replace("*", "").strip()
+        # Remove HTML tags (e.g. <sup>1</sup>)
+        title = re.sub(r"<[^>]+>", "", title).strip()
         
         tables.append({
             "chunk_id": table_uuid,
@@ -119,6 +122,12 @@ def extract_tables_from_markdown():
         if not line:
             continue
 
+        # Ignore Horizontal Rules (---) often found at page breaks
+        # We only ignore them if we are tracking a table. 
+        # If we hit a Header next, that will still flush the table.
+        if re.match(r"^[-*]{3,}$", line):
+            continue
+
         # Check Header
         m_header = header_pattern.match(line)
         if m_header:
@@ -143,6 +152,21 @@ def extract_tables_from_markdown():
                 table_start_page = current_page
             current_table_lines.append(line)
         else:
+            # Check for "Orphan Rows" (lost pipes) - frequent in this doc's Appendices
+            # Pattern: Code (9-10 chars) + Space + Description
+            # e.g. "WAG87####E Federal..."
+            # We only do this if we are ALREADY in a table (continuation)
+            if current_table_lines:
+                # Regex: Start with 9-10 alphanumeric/hash chars, then space
+                m_orphan = re.match(r"^([A-Z0-9#]{9,10})\s+(.*)$", line)
+                if m_orphan:
+                    # Reconstruct table row
+                    code = m_orphan.group(1)
+                    desc = m_orphan.group(2)
+                    current_table_lines.append(f"| {code} | {desc} |")
+                    # Do NOT update last_non_empty_line here; we want to preserve the Title candidate (header)
+                    continue
+
             # Not a table line -> End of table
             if current_table_lines:
                 flush_table()
