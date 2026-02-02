@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { ChatLayout } from '@/components/chat/ChatLayout';
 import { ContextPanel } from '@/components/pdf/ContextPanel';
+import { TableExplorer } from '@/components/tables/TableExplorer';
 import { type PanelImperativeHandle } from "react-resizable-panels";
 
 interface AppLayoutProps {
@@ -14,19 +15,20 @@ interface AppLayoutProps {
 
 export function AppLayout({ defaultLayout: _defaultLayout = [20, 50, 30] }: AppLayoutProps) {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [isContextOpen, setIsContextOpen] = useState(false);
+    // rightPanel state: 'pdf' | 'tables' | null
+    const [rightPanel, setRightPanel] = useState<'pdf' | 'tables' | null>(null);
     const [activeCitation, setActiveCitation] = useState<string | null>(null);
     const sidebarRef = useRef<PanelImperativeHandle>(null);
 
     const { messages, sendMessage, isLoading, sources } = useChat();
 
-    // Auto-open context panel when sources arrive
+    // Auto-open context panel (pdf) when sources arrive
     useEffect(() => {
-        if (sources.length > 0) setIsContextOpen(true);
+        if (sources.length > 0 && rightPanel === null) setRightPanel('pdf');
     }, [sources]);
 
     const handleCitationClick = (citationKey: string) => {
-        setIsContextOpen(true);
+        setRightPanel('pdf');
         setActiveCitation(citationKey);
     };
 
@@ -68,22 +70,30 @@ export function AppLayout({ defaultLayout: _defaultLayout = [20, 50, 30] }: AppL
                         messages={messages}
                         sendMessage={sendMessage}
                         isLoading={isLoading}
-                        onToggleContext={() => setIsContextOpen(prev => !prev)}
-                        isContextOpen={isContextOpen}
+                        onToggleContext={() => setRightPanel(prev => prev === 'pdf' ? null : 'pdf')}
+                        isContextOpen={rightPanel === 'pdf'}
+                        onToggleTables={() => setRightPanel(prev => prev === 'tables' ? null : 'tables')}
+                        isTablesOpen={rightPanel === 'tables'}
                         onCitationClick={handleCitationClick}
                     />
                 </ResizablePanel>
 
-                {/* RIGHT: Context (PDF) */}
-                {isContextOpen && (
+                {/* RIGHT: Context (PDF) or Table Explorer */}
+                {rightPanel !== null && (
                     <>
                         <ResizableHandle withHandle />
                         <ResizablePanel defaultSize="45" minSize="30" maxSize="80">
-                            <ContextPanel
-                                sources={sources}
-                                onClose={() => setIsContextOpen(false)}
-                                activeCitation={activeCitation}
-                            />
+                            {rightPanel === 'pdf' ? (
+                                <ContextPanel
+                                    sources={sources}
+                                    onClose={() => setRightPanel(null)}
+                                    activeCitation={activeCitation}
+                                />
+                            ) : (
+                                <TableExplorer
+                                    onClose={() => setRightPanel(null)}
+                                />
+                            )}
                         </ResizablePanel>
                     </>
                 )}
