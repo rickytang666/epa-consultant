@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { User, Bot } from 'lucide-react';
 
 const bubbleVariants = cva(
-    "flex w-max max-w-[85%] flex-col gap-2 rounded-lg px-4 py-3 text-sm shadow-sm",
+    "flex w-fit max-w-[85%] flex-col gap-2 rounded-lg px-4 py-3 text-sm shadow-sm",
     {
         variants: {
             role: {

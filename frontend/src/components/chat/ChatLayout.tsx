@@ -30,7 +30,7 @@ export function ChatLayout({
     return (
         <div className="flex h-full flex-col">
             <header className="flex h-14 items-center border-b px-6">
-                <h2 className="text-lg font-semibold">New Chat</h2>
+                <h2 className="text-lg font-semibold">EPA Consultant</h2>
                 <div className="ml-auto flex gap-2">
                     <Button
                         variant={isTablesOpen ? "secondary" : "outline"}
