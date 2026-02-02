@@ -52,7 +52,7 @@ class LLMProvider:
         ],
         "summarization": [
             ("openrouter", "qwen/qwen-turbo"),
-            ("openai", "openai/gpt-4.1-nano"),
+            ("openai", "gpt-4.1-nano"),
             ("google", "gemini-2.0-flash-lite")
         ],
         "router": [

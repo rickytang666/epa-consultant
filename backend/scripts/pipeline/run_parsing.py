@@ -36,8 +36,15 @@ def main():
     if needs_llm:
         print("Checking API availability and quota...")
         llm = LLMClient()
-        provider = llm.select_best_provider()
+        openai_ok = llm.validate_openai()
+        google_ok = llm.validate_gemini()
         
+        provider = None
+        if openai_ok:
+            provider = "openai/openrouter"
+        elif google_ok:
+            provider = "google"
+
         if not provider:
             print(f"\n{BOLD}{RED}WARNING: All API keys are invalid or quota exhausted!{RESET}")
             print(f"{RED}Summaries and header correction cannot proceed.{RESET}")

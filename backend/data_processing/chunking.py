@@ -7,6 +7,7 @@ from typing import List
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from shared.schemas import Chunk
+from data_processing.table_splitter import split_markdown_table
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +72,21 @@ def split_chunks(chunks: List[Chunk], chunk_size: int, chunk_overlap: int) -> Li
     final_chunks = []
     
     for chunk in chunks:
-        # SKIP splitting for tables - keep as-is
+        # Handle Tables: Split if too large, preserve if small
         if chunk.metadata.is_table:
-            final_chunks.append(chunk)
+            if len(chunk.content) > chunk_size:
+                # Use smart table splitter
+                split_tables = split_markdown_table(chunk.content, max_chars=chunk_size)
+                
+                for i, split_content in enumerate(split_tables):
+                     new_chunk = chunk.model_copy(update={
+                        "chunk_id": f"{chunk.chunk_id}-t{i}",
+                        "content": split_content
+                    })
+                     final_chunks.append(new_chunk)
+            else:
+                # Small table - keep as-is
+                final_chunks.append(chunk)
             continue
             
         # Split large chunks

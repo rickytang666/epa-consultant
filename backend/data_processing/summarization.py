@@ -185,18 +185,20 @@ async def generate_section_summaries(
             child_summaries=filtered_children
         )
         
-        model = "gpt-5-mini"
-        model = "gpt-5-mini"
         # No try/catch needed - client is validated beforehand
-        response, cost = await llm_client.async_chat_completion(
-            model=model,
+        # LLMProvider returns dict {"content": "...", "model": "..."}
+        response_dict = await llm_client.chat_completion(
             messages=[{"role": "user", "content": prompt}],
-            response_format=SectionSummary
+            stream=False
         )
+        
+        # LLMProvider returns dict {"content": "...", "model": "..."}
+        summary_text = response_dict.get("content", "").strip()
+        cost = 0.0 # Provider doesn't return cost yet
         
         logger.info(f"Summarized '{section_name}'")
         
-        return key, response.choices[0].message.parsed.summary, cost
+        return key, summary_text, cost
 
     # Process levels
     for level in sorted_levels:
@@ -262,14 +264,21 @@ def generate_document_summary(
     template = get_document_summary_template()
     prompt = template.render(filename=filename, sections=sections)
     
-    model = "gpt-5-mini"
-    model = "gpt-5-mini"
     # Validated client guaranteed
-    response, cost = llm_client.chat_completion(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        reasoning_effort="low"
-    )
-    content = response.choices[0].message.content or ""
-    logger.info(f"Document Summary | Cost: ${cost:.6f}")
-    return content.strip(), cost
+    async def _call_llm():
+        return await llm_client.chat_completion(
+            messages=[{"role": "user", "content": prompt}],
+            stream=False
+        )
+
+    try:
+        response_dict = asyncio.run(_call_llm())
+    except Exception as e:
+        # Fallback for nested loops (if already inside async loop)
+        logger.warning(f"Failed to run async document summary: {e}")
+        return "", 0.0
+    
+    content = response_dict.get("content", "").strip()
+    cost = 0.0
+    logger.info(f"Document Summary | Cost: N/A")
+    return content, cost
