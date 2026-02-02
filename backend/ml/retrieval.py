@@ -132,16 +132,59 @@ async def retrieve_relevant_chunks(
                     c_meta["header_path_str"] = path_str
                 keyword_results[-1]["metadata"] = c_meta
 
-    # 3. fusion
+    # 3. Cache Lookup for Hydration
+    # We need to ensure results have full metadata (especially page_number from location)
+    # Vector store might have incomplete metadata, so we rely on the source of truth (chunks.json cache)
+    if not bm25:
+         bm25, chunks_cache = await asyncio.to_thread(_load_bm25_index)
+    
+    chunk_map = {c["chunk_id"]: c for c in chunks_cache}
+
+    def hydrate_result(res: Dict[str, Any]) -> Dict[str, Any]:
+        """Fill in missing metadata from source cache"""
+        cid = res.get("chunk_id")
+        if cid and cid in chunk_map:
+            cached = chunk_map[cid]
+            # Merge metadata
+            meta = res.get("metadata", {}) or {}
+            cached_meta = cached.get("metadata", {}) or {}
+            location = cached.get("location", {}) or {}
+            
+            # Combine all available info
+            final_meta = {**meta, **cached_meta}
+            
+            # Critical: Map page_number if missing
+            if "page_number" not in final_meta and "page_number" in location:
+                final_meta["page_number"] = location["page_number"]
+                
+             # Construct header path string if missing
+            if "header_path_str" not in final_meta and "header_path" in cached:
+                path_str = " > ".join([h["name"] for h in cached["header_path"]])
+                final_meta["header_path_str"] = path_str
+
+            return {
+                "chunk_id": cid,
+                "text": cached.get("content"), # Use full text from cache (vector store might truncate/process)
+                "metadata": final_meta,
+                "distance": res.get("distance")
+            }
+        return res
+
+    # Hydrate both lists
+    vector_results = [hydrate_result(r) for r in vector_results]
+    keyword_results = [hydrate_result(r) for r in keyword_results]
+
+    # 4. Fusion
     # TODO: tune weights
     fused_results = reciprocal_rank_fusion(
         {"vector": vector_results, "bm25": keyword_results},
         weights={"vector": 1.0, "bm25": 1.0},
     )
 
-    # 4. Repair formatting (heuristic for broken tables)
+    # 5. Repair formatting (heuristic for broken tables)
     final_results = fused_results[:n_results]
     for res in final_results:
+        # Ensure text is present
         if "text" in res and res["text"]:
             res["text"] = _repair_table_formatting(res["text"])
 
