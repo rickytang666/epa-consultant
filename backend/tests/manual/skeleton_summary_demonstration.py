@@ -4,9 +4,10 @@ import sys
 import os
 
 import argparse
-from scripts.tests.utils import load_or_extract_pdf
-
 # Add backend directory to path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+from test_utils import load_or_extract_pdf
 from data_processing.ingest import DocumentIngestor
 
 def main():

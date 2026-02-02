@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 # add backend to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from ml.rag_pipeline import query_rag
+from ml.rag_pipeline import query_rag_sync
 
 def test_quality():
     load_dotenv()
@@ -20,7 +20,7 @@ def test_quality():
     
     try:
         full_answer = ""
-        for event in query_rag(query, top_k=10):
+        for event in query_rag_sync(query, top_k=10):
             if event["type"] == "content":
                 full_answer += event["delta"]
             elif event["type"] == "sources":

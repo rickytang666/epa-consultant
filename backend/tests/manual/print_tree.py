@@ -6,7 +6,7 @@ import sys
 # Add backend directory to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from scripts.tests.visualization_utils import print_document_hierarchy
+from visualization_utils import print_document_hierarchy
 
 def main():
     parser = argparse.ArgumentParser(description="Print the header hierarchy tree of a processed JSON file.")

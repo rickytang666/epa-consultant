@@ -1,0 +1,32 @@
+[
+  {
+    "input": "What are the four pesticide use patterns covered by this permit?",
+    "actual_output": "", 
+    "expected_output": "1. Mosquito and Other Flying Insect Pest Control\n2. Weed and Algae Pest Control\n3. Animal Pest Control\n4. Forest Canopy Pest Control",
+    "context": []
+  },
+  {
+    "input": "When does this permit expire?",
+    "actual_output": "",
+    "expected_output": "The permit expires at 11:59 p.m. on October 30, 2031.",
+    "context": []
+  },
+  {
+    "input": "What are the two types of Operators defined in this permit?",
+    "actual_output": "",
+    "expected_output": "1. Applicators: Entities who perform the application.\n2. Decision-makers: Entities with control over the decision to perform the application.",
+    "context": []
+  },
+  {
+    "input": "What are the specific deadlines for filing an NOI for a new decision-maker?",
+    "actual_output": "",
+    "expected_output": "At least 10 days before any discharge for which an NOI is required.",
+    "context": []
+  },
+  {
+    "input": "If an Operator observes an adverse incident, what are the two required notification steps and their deadlines?",
+    "actual_output": "",
+    "expected_output": "1. 24-Hour Notification: Call the appropriate EPA Incident Reporting Contact within 24 hours.\n2. 30-Day Reporting: Submit a written report to the EPA Regional Office within 30 days.",
+    "context": []
+  }
+]

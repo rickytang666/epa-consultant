@@ -1,168 +1,89 @@
-# Data Processing Module
+# data processing module
 
-A general-purpose pipeline for processing any PDF into RAG-ready chunks with hierarchical summaries. Extracts text, tables, and structure (headers/sections) — images and figures are excluded. Works with research papers, financial statements, regulatory documents, and more.
+pipeline for processing pdfs into rag-ready chunks with hierarchical logic.
 
-## Pipeline Flow
+## pipeline flow
 
-```mermaid
-flowchart TD
-    subgraph Extraction["pdf_extractor.py"]
-        A[PDF File] --> B[DataLab API]
-        B --> C[Markdown + Metadata JSON]
-    end
+1. **extract**: pdf -> markdown (via datalab api).
+2. **ingest**: split pages -> parse headers -> correct headers (llm) -> merge/split chunks.
+3. **enrich**: generate hierarchical summaries (section/document).
 
-    subgraph Ingestion["ingest.py"]
-        C --> D[Split by Page]
-        D --> E[Parse Headers & Sections]
-        E --> F{Fix Headers?}
-        F -->|Yes| G[LLM Header Correction]
-        G --> H[Apply Corrections]
-        F -->|No| I[Merge Sections]
-        H --> I
-        I --> J[Split into RAG Chunks]
-        J --> K[Generate Section Summaries]
-        K --> L[Generate Document Summary]
-    end
+## modules
 
-    L --> M[Processed JSON Output]
-```
+### pdf_extractor.py
 
-## Core Modules
+- sync/async extraction via datalab api.
+- outputs markdown + metadata to `data/extracted/`.
 
-### `pdf_extractor.py`
+### ingest.py
 
-Extracts markdown from PDFs via [DataLab API](https://www.datalab.to).
+- main orchestrator.
+- coordinates parsing, header correction, chunking, and summarization.
 
-- `extract_pdf_sync()` - Synchronous extraction with polling
-- `extract_pdf_async()` - Async version using httpx
-- Outputs JSON with markdown and page delimiters to `data/extracted/`
+### parsing.py
 
-### `ingest.py` - Main Orchestrator
+- splits by page.
+- extracts sections and tables.
 
-Streamlined orchestrator (~100 lines) that coordinates the entire pipeline:
+### header_correction.py
 
-```python
-DocumentIngestor(fix_headers=True, chunk_size=1000, chunk_overlap=200)
-  .ingest(markdown_text, filename) -> ProcessedDocument
-```
+- **problem**: pdfs often have broken header levels (e.g. "1.0" detected as h2).
+- **solution**: extracts headers, sends to llm to fix hierarchy based on numbering (1.0 -> 1.1), applies fixes to chunks.
 
-**Pipeline Steps**:
+### chunking.py
 
-1. Parse markdown → `parsing.split_by_page()`, `parsing.process_text_pages()`
-2. Correct headers (optional) → `header_correction.correct_headers()`
-3. Merge small chunks → `chunking.merge_chunks()`
-4. Split large chunks → `chunking.split_chunks()`
-5. Build header tree → `header_correction.build_header_tree()`
+- `merge_chunks()`: combines small chunks under same header.
+- `split_chunks()`: splits large chunks (recursive character splitter) preserving header context.
 
-### `llm_client.py` - LLM Wrapper
+### summarization.py
 
-Unified LLM interface with **OpenAI primary, Gemini fallback**:
+- generates bottom-up summaries (section -> document).
+- uses `section_summary.jinja2` and `document_summary.jinja2`.
 
-- `chat_completion()` - Sync completion with auto-fallback
-- `async_chat_completion()` - Async version
-- Supports structured output (Pydantic models)
-- Cost tracking for both providers
+### extract_tables.py
 
-**Fallback Logic**: If OpenAI fails → automatically tries Gemini 2.0 Flash (FREE tier)
+- rebuilds `tables.json` from extraction.
+- handles multi-page merging (e.g. Regions 4/10).
+- deduplicates sequential table fragments.
+- cleans HTML tags and fixes headers.
 
-### `parsing.py` - Markdown Parsing
+## usage
 
-Extract sections, headers, and tables from markdown:
+all scripts should be run from `backend/` using `uv`.
 
-- `split_by_page()` - Split by page delimiters
-- `parse_sections()` - Extract sections based on headers
-- `extract_tables()` - Extract markdown tables with improved detection
-- `process_text_pages()` - Main processing pipeline
-
-### `chunking.py` - Chunk Operations
-
-Merge and split text chunks for optimal RAG performance:
-
-- `merge_chunks()` - Combine small chunks under same header
-- `split_chunks()` - Split large chunks with overlap (preserves `chunk_index`)
-
-**Key Logic**: Tables never merged/split, uses `RecursiveCharacterTextSplitter`
-
-### `header_correction.py` - Header Hierarchy Fixing
-
-LLM-based header level correction using section numbering:
-
-- `correct_headers()` - Main correction logic with LLM
-- `apply_corrections()` - Apply fixes using section numbering (1.0 → 1.1 → 1.1.1)
-- `build_header_tree()` - Build hierarchical header tree
-
-### `summarization.py` - LLM Summarization
-
-Generate hierarchical summaries (Sprint 2 feature):
-
-- `generate_section_summaries()` - Bottom-up async summarization
-- `generate_section_summaries_sync()` - Sync wrapper
-- `generate_document_summary()` - Overall document summary
-
-#### Header Parsing
-
-Headers are detected using markdown patterns (`# Header 1`, `## Header 2`, etc.). Each chunk maintains a `header_path` - a breadcrumb trail of parent headers for context.
-
-#### Header Correction
-
-PDF extraction sometimes misidentifies header levels (e.g., "1.0 Coverage" as H2 instead of H1). The correction process:
-
-1. Extract unique headers from all chunks
-2. Send to LLM with `header_correction.jinja2` prompt
-3. LLM returns corrections with confidence levels
-4. Apply corrections using **section numbering patterns** (1.0 → 1.1 → 1.1.1) to re-establish parent-child relationships
-
-### `models.py`
-
-**Output Models** (defined in `shared/schemas.py`):
-
-- `Chunk` - Atomic RAG unit with content, location, header_path
-- `ProcessedDocument` - Container with chunks, summaries, header_tree, costs
-- `HeaderAnalysis` / `HeaderCorrection` - Pydantic models for LLM responses
-
-### `prompts.py`
-
-Template loader using Jinja2. We use Jinja2 templates for cleaner prompt management - separates prompt logic from Python code and makes prompts easier to iterate on.
-
-## Templates
-
-| Template                   | Purpose                                |
-| -------------------------- | -------------------------------------- |
-| `header_correction.jinja2` | Prompt for LLM to fix header hierarchy |
-| `section_summary.jinja2`   | Prompt for section summarization       |
-| `document_summary.jinja2`  | Prompt for overall document summary    |
-
-## Scripts
-
-### `scripts/run/run_pdf_extraction.py`
+### pipeline scripts
 
 ```bash
-# Extract single PDF
-uv run python scripts/run/run_pdf_extraction.py document.pdf
+# extract pdfs (files in data/raw -> data/extracted)
+uv run python scripts/pipeline/run_pdf_extraction.py
 
-# Extract all PDFs in data/raw/
-uv run python scripts/run/run_pdf_extraction.py
+# parse extraction (json in data/extracted -> data/processed)
+# Use --fix-headers to enable llm header correction
+uv run python scripts/pipeline/run_parsing.py "filename.json" --fix-headers
+
+# run full pipeline (extract + parse)
+uv run python scripts/pipeline/run_pipeline.py
+
+# run table extraction (required for frontend Table Explorer)
+uv run python scripts/pipeline/extract_tables.py
 ```
 
-### `scripts/run/run_parsing.py`
+### setup
 
 ```bash
-# Parse single file (with summaries)
-uv run python scripts/run/run_parsing.py "filename.json"
-
-# Parse all files with header correction
-uv run python scripts/run/run_parsing.py --fix-headers
-
-# Skip summary generation
-uv run python scripts/run/run_parsing.py --skip-summaries
+# seed database with processed data
+uv run python scripts/setup/seed_db.py
 ```
 
-## Data Directories
+### benchmarks
 
-| Directory         | Contents                                              |
-| ----------------- | ----------------------------------------------------- |
-| `data/raw/`       | Input PDFs                                            |
-| `data/extracted/` | JSON output from pdf_extractor (markdown + metadata)  |
-| `data/processed/` | Final processed JSON (chunks, summaries, header_tree) |
+```bash
+# benchmark summarization costs/speed
+uv run python scripts/benchmarks/benchmark_summarization.py
 
-> **Note:** PDF extraction could alternatively use [pymupdf4llm](https://github.com/pymupdf/pymupdf4llm) (open-source, free) which performs nearly as well but struggles with complex table extraction.
+# benchmark cost savings from child chunk deduplication
+uv run python scripts/benchmarks/benchmark_cost_savings.py
+
+# benchmark adaptive chunk sampling
+uv run python scripts/benchmarks/benchmark_adaptive_sampling.py
+```

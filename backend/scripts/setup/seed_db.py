@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 # add backend to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from ml.embeddings import get_embeddings_batch
+from ml.embeddings import get_embeddings_batch_sync
 from ml.vector_store import insert_chunks
 from dotenv import load_dotenv
 
@@ -98,7 +98,8 @@ def seed_database():
     # path to chunks.json
     # currently assuming backend/scripts is CWD or relative to it
     # file is at backend/data/processed/chunks.json
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # __file__ is backend/scripts/setup/seed_db.py -> three levels up to backend/
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     chunks_path = os.path.join(base_dir, "data", "processed", "chunks.json")
     
     if not os.path.exists(chunks_path):
@@ -128,7 +129,7 @@ def seed_database():
                 
                 # generate embeddings
                 # this might take time/money, so logging is important
-                embeddings = get_embeddings_batch(texts)
+                embeddings = get_embeddings_batch_sync(texts)
                 
                 # insert
                 insert_chunks(batch_chunks, embeddings)
