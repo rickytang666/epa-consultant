@@ -1,0 +1,43 @@
+uv run pytest tests/acceptance/test_assignment_criteria.py -s
+
+
+[TestCase: What are the four pesticide us...]
+  Faithfulness: 1.00
+  Relevancy:    1.00
+
+[TestCase: When does this permit expire?...]
+  Faithfulness: 1.00
+  Relevancy:    1.00
+
+[TestCase: What are the two types of Oper...]
+  Faithfulness: 1.00
+  Relevancy:    1.00
+
+[TestCase: What are the specific deadline...]
+  Faithfulness: 1.00
+  Relevancy:    1.00
+
+[TestCase: If an Operator observes an adv...]
+  Faithfulness: 1.00
+  Relevancy:    1.00
+.
+================================================================================
+FINAL EVALUATION REPORT
+================================================================================
+Question                                           | Faith  | Relev  | Status
+--------------------------------------------------------------------------------
+What are the four pesticide use patterns covere... | 1.00   | 1.00   | PASS
+When does this permit expire?                      | 1.00   | 1.00   | PASS
+What are the two types of Operators defined in ... | 1.00   | 1.00   | PASS
+What are the specific deadlines for filing an N... | 1.00   | 1.00   | PASS
+If an Operator observes an adverse incident, wh... | 1.00   | 1.00   | PASS
+================================================================================
+SUMMARY: 5/5 Tests Passed
+Average Faithfulness: 1.00
+Average Relevancy:    1.00
+================================================================================
+
+Running teardown with pytest sessionfinish...
+
+
+=============================================================================== 5 passed in 57.79s ================================================================================

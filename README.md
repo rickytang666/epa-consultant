@@ -126,6 +126,19 @@ graph TD
 - **Citations**: Answers include citations linking back to specific source chunks.
 - **Tables**: Dedicated view for extracted regulatory tables.
 
+## Evaluation & Results
+
+The system maintains a **perfect score (1.00/1.00)** on both Faithfulness and Relevancy metrics.
+
+### DeepEval Performance (Official)
+
+Verified against five [curated questions](backend/tests/acceptance/golden_dataset.json) derived from the [2026 PGP PDF](https://www.epa.gov/system/files/documents/2024-12/2026-pgp.pdf):
+
+- **Faithfulness (1.00)**: All answers are strictly grounded in the source text; zero hallucinations detected.
+- **Relevancy (1.00)**: Every response directly addresses the user's question without including extraneous information.
+
+All 5/5 test cases passed ([view logs](deepeval.txt)).
+
 ## Team
 
 - Justin Jonany
